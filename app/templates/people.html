@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Personas{% endblock %}
+{% block content %}
+<h1>Personas y cuentas</h1>
+<p class="muted">Las facturas tienen un <strong>titular</strong> (la casa, alguien de la casa o un tercero) y cada pago registra <strong>quién pagó</strong>. Si alguien paga algo que no es suyo, queda una deuda acá.</p>
+
+<div class="grid">
+<article>
+  <header><strong>🤝 Saldos</strong></header>
+  {% for d in debts %}
+    <form method="post" action="/personas/saldar" class="inline-form">
+      <span>{{ d.debtor.name }} → {{ d.creditor.name }}: <strong>{{ d.amount|money(d.currency) }}</strong></span>
+      <input type="hidden" name="from_id" value="{{ d.debtor.id }}">
+      <input type="hidden" name="to_id" value="{{ d.creditor.id }}">
+      <input type="hidden" name="currency" value="{{ d.currency }}">
+      <input name="amount" type="number" step="0.01" min="0.01" value="{{ '%.2f'|format(d.amount) }}">
+      <button type="submit" class="secondary">Saldar</button>
+    </form>
+  {% else %}<p class="muted">No hay deudas pendientes.</p>{% endfor %}
+  {% if settlements %}
+    <details><summary>Historial de liquidaciones</summary>
+      {% for s in settlements %}<p><small>{{ s.date|fdate }} · {{ s.amount|money(s.currency) }} {{ s.notes }}</small></p>{% endfor %}
+    </details>
+  {% endif %}
+</article>
+
+<article>
+  <header><strong>📍 Ubicaciones de stock</strong></header>
+  <p>{% for l in locations %}<span class="badge pendiente">{{ l.name }}</span> {% endfor %}</p>
+  <form method="post" action="/ubicaciones/nueva" class="inline-form">
+    <input name="name" placeholder="Nueva ubicación" required>
+    <button type="submit" class="secondary">Agregar</button>
+  </form>
+</article>
+</div>
+
+<h2>Personas</h2>
+<table>
+  <thead><tr><th>Nombre</th><th>Tipo</th><th>Notas</th><th></th></tr></thead>
+  <tbody>
+  {% for p in people + [None] %}
+    {% set fid = "person-%s" % (p.id if p else "new") %}
+    <tr>
+      <td><input form="{{ fid }}" name="name" value="{{ p.name if p else '' }}" placeholder="Nueva persona" required></td>
+      <td><select form="{{ fid }}" name="kind">{% for k, label in PERSON_KINDS.items() %}<option value="{{ k }}" {{ 'selected' if k == (p.kind if p else 'miembro') }}>{{ label }}</option>{% endfor %}</select></td>
+      <td><input form="{{ fid }}" name="notes" value="{{ p.notes if p else '' }}" placeholder="ej. mi vieja, inquilino"></td>
+      <td>
+        <form id="{{ fid }}" method="post" action="/personas/guardar">
+          <input type="hidden" name="person_id" value="{{ p.id if p else '' }}">
+          <button type="submit" class="{{ 'secondary outline' if p else '' }}">{{ "Guardar" if p else "Agregar" }}</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

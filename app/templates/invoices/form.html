@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if invoice.id else "Nueva" }} factura{% endblock %}
+{% block content %}
+<h1>{{ "Editar factura" if invoice.id else "Nueva factura" }}</h1>
+
+{% if not invoice.id %}
+<details>
+  <summary>📷 Cargar desde el QR de ARCA/AFIP</summary>
+  <p class="muted">Escaneá el QR de la factura electrónica o pegá la URL que contiene. Completa fecha, CUIT, número, importe y moneda.</p>
+  <div id="reader"></div>
+  <div class="inline-form">
+    <input id="qr-text" placeholder="https://www.afip.gob.ar/fe/qr/?p=...">
+    <button type="button" id="qr-parse">Leer</button>
+    <button type="button" id="qr-cam" class="secondary">Cámara</button>
+  </div>
+  <p id="qr-msg"></p>
+</details>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" action="{{ '/facturas/%d/editar' % invoice.id if invoice.id else '/facturas/nueva' }}">
+  <div class="grid">
+    <label>Proveedor / emisor *<input name="provider" value="{{ invoice.provider }}" required></label>
+    <label>CUIT emisor <input name="provider_cuit" value="{{ invoice.provider_cuit }}"></label>
+    <label>Nº comprobante <input name="number" value="{{ invoice.number }}"></label>
+  </div>
+  <div class="grid">
+    <label>Concepto <input name="concept" value="{{ invoice.concept }}" placeholder="ej. Luz depto, cuota colegio"></label>
+    <label>Categoría
+      <select name="category">{% for c in INVOICE_CATEGORIES %}<option {{ 'selected' if c == invoice.category }}>{{ c }}</option>{% endfor %}</select>
+    </label>
+    <label>Período <input name="period" type="month" value="{{ invoice.period }}"></label>
+  </div>
+  <div class="grid">
+    <label>¿De quién es? (titular)
+      <select name="owner_id"><option value="">—</option>
+        {% for p in people %}<option value="{{ p.id }}" {{ 'selected' if p.id == invoice.owner_id }}>{{ p.name }} ({{ PERSON_KINDS.get(p.kind, p.kind) }})</option>{% endfor %}
+      </select>
+    </label>
+    <label>Servicio asociado
+      <select name="service_id"><option value="">—</option>
+        {% for s in services %}<option value="{{ s.id }}" {{ 'selected' if s.id == invoice.service_id }}>{{ s.name }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="grid">
+    <label>Importe *<input name="amount" type="number" step="0.01" min="0" required value="{{ invoice.amount or '' }}"></label>
+    <label>Moneda
+      <select name="currency">{% for c in CURRENCIES %}<option {{ 'selected' if c == invoice.currency }}>{{ c }}</option>{% endfor %}</select>
+    </label>
+    <label>Emisión <input name="issue_date" type="date" value="{{ invoice.issue_date.isoformat() if invoice.issue_date else '' }}"></label>
+    <label>Vencimiento <input name="due_date" type="date" value="{{ invoice.due_date.isoformat() if invoice.due_date else '' }}"></label>
+  </div>
+  <label>Adjunto (PDF o foto){% if invoice.attachment %} — ya tiene uno, subí otro para reemplazarlo{% endif %}
+    <input type="file" name="attachment" accept=".pdf,image/*">
+  </label>
+  <label>Notas <textarea name="notes" rows="2">{{ invoice.notes }}</textarea></label>
+
+  {% if not invoice.id %}
+  <fieldset>
+    <label><input type="checkbox" name="paid_now" id="paid_now"> Ya está pagada</label>
+    <div class="grid" id="paid-fields" hidden>
+      <label>Pagó
+        <select name="paid_by_id"><option value="">—</option>
+          {% for p in people %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Medio
+        <select name="method">{% for m in PAYMENT_METHODS %}<option>{{ m }}</option>{% endfor %}</select>
+      </label>
+    </div>
+  </fieldset>
+  {% endif %}
+  <button type="submit">Guardar</button>
+</form>
+{% endblock %}
+{% block scripts %}
+{% if not invoice.id %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/invoice_qr.js"></script>
+{% endif %}
+{% endblock %}

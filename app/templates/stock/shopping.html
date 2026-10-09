@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Lista de compras{% endblock %}
+{% block content %}
+<h1>Lista de compras</h1>
+<p class="muted">Productos por debajo de su stock mínimo. Configurá el mínimo de cada producto para que aparezca acá.</p>
+<table class="striped">
+  <thead><tr><th>✔</th><th>Producto</th><th>Categoría</th><th class="num">Hay</th><th class="num">Comprar</th></tr></thead>
+  <tbody>
+  {% for item in items %}
+    <tr>
+      <td><input type="checkbox"></td>
+      <td><a href="/stock/{{ item.product.id }}">{{ item.product.name }}</a> <small class="muted">{{ item.product.brand }}</small></td>
+      <td>{{ item.product.category }}</td>
+      <td class="num">{{ item.product.stock|qty }} {{ item.product.unit }}</td>
+      <td class="num"><strong>{{ item.to_buy|qty }} {{ item.product.unit }}</strong></td>
+    </tr>
+  {% else %}<tr><td colspan="5" class="muted">No falta nada 🎉</td></tr>{% endfor %}
+  </tbody>
+</table>
+<button class="secondary outline" onclick="navigator.clipboard.writeText([...document.querySelectorAll('tbody tr')].map(r => '- ' + r.cells[1].innerText + ': ' + r.cells[4].innerText).join('\n')).then(() => alert('Lista copiada'))">Copiar como texto</button>
+{% endblock %}

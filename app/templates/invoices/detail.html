@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.provider }}{% endblock %}
+{% block content %}
+<hgroup>
+  <h1>{{ invoice.provider }} <span class="badge {{ invoice.status }}">{{ invoice.status }}</span></h1>
+  <p>{{ invoice.concept }} {% if invoice.period %}· período {{ invoice.period }}{% endif %} · {{ invoice.category }}</p>
+</hgroup>
+
+<div class="grid">
+  <article>
+    <p>Titular: <strong>{{ invoice.owner.name if invoice.owner else "—" }}</strong></p>
+    {% if invoice.service %}<p>Servicio: {{ invoice.service.name }}</p>{% endif %}
+    {% if invoice.number %}<p>Comprobante: {{ invoice.number }}</p>{% endif %}
+    {% if invoice.provider_cuit %}<p>CUIT: {{ invoice.provider_cuit }}</p>{% endif %}
+    <p>Emisión: {{ invoice.issue_date|fdate }} · Vence: {{ invoice.due_date|fdate if invoice.due_date else "—" }}</p>
+    {% if invoice.attachment %}<p><a href="/facturas/{{ invoice.id }}/adjunto" target="_blank">📎 Ver adjunto</a></p>{% endif %}
+    {% if invoice.notes %}<p>{{ invoice.notes }}</p>{% endif %}
+  </article>
+  <article>
+    <p>Importe: <strong>{{ invoice.amount|money(invoice.currency) }}</strong></p>
+    <p>Pagado: {{ invoice.paid|money(invoice.currency) }}</p>
+    <p>Saldo: <strong>{{ invoice.balance|money(invoice.currency) }}</strong></p>
+    <div class="actions">
+      <a href="/facturas/{{ invoice.id }}/editar" role="button" class="secondary outline">Editar</a>
+      <form method="post" action="/facturas/{{ invoice.id }}/eliminar" onsubmit="return confirm('¿Eliminar la factura y sus pagos?')">
+        <button class="secondary outline">Eliminar</button>
+      </form>
+    </div>
+  </article>
+</div>
+
+{% if invoice.balance > 0 %}
+<article>
+  <header><strong>Registrar pago</strong></header>
+  <form method="post" action="/facturas/{{ invoice.id }}/pagar">
+    <div class="grid">
+      <label>Monto <input name="amount" type="number" step="0.01" min="0.01" value="{{ '%.2f'|format(invoice.balance) }}" required></label>
+      <label>Fecha <input name="payment_date" type="date" value="{{ today.isoformat() }}"></label>
+      <label>Medio <select name="method">{% for m in PAYMENT_METHODS %}<option>{{ m }}</option>{% endfor %}</select></label>
+      <label>¿Quién pagó?
+        <select name="paid_by_id"><option value="">—</option>
+          {% for p in people %}<option value="{{ p.id }}" {{ 'selected' if p.id == invoice.owner_id }}>{{ p.name }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <label>Notas <input name="notes" placeholder="ej. nro. de operación"></label>
+    <button type="submit">Registrar pago</button>
+  </form>
+</article>
+{% endif %}
+
+<h2>Pagos</h2>
+<table class="striped">
+  <thead><tr><th>Fecha</th><th>Pagó</th><th>Medio</th><th class="num">Monto</th><th>Notas</th><th></th></tr></thead>
+  <tbody>
+  {% for p in invoice.payments %}
+    <tr>
+      <td>{{ p.date|fdate }}</td><td>{{ p.paid_by.name if p.paid_by else "—" }}</td><td>{{ p.method }}</td>
+      <td class="num">{{ p.amount|money(invoice.currency) }}</td><td>{{ p.notes }}</td>
+      <td><form method="post" action="/pagos/{{ p.id }}/eliminar"><button class="link" title="Eliminar">✕</button></form></td>
+    </tr>
+  {% else %}<tr><td colspan="6" class="muted">Sin pagos registrados.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

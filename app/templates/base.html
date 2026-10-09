@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Casa{% endblock %} · House ERP</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul><li><a href="/" class="brand"><strong>🏠 House ERP</strong></a></li></ul>
+      <ul>
+        <li><a href="/stock">Stock</a></li>
+        <li><a href="/stock/escanear">Escanear</a></li>
+        <li><a href="/stock/compras">Compras</a></li>
+        <li><a href="/facturas">Facturas</a></li>
+        <li><a href="/servicios">Servicios</a></li>
+        <li><a href="/personas">Personas</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container muted">
+    <small>Exportar: <a href="/exportar/stock.csv">stock.csv</a> · <a href="/exportar/facturas.csv">facturas.csv</a></small>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

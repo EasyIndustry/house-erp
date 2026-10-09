@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Servicios{% endblock %}
+{% block content %}
+<div class="actions" style="justify-content: space-between">
+  <h1>Servicios y gastos fijos</h1>
+  <a href="/servicios/nuevo" role="button">+ Servicio</a>
+</div>
+<p class="muted">Registrá acá luz, gas, internet, expensas, prepaga, seguros… El tablero te avisa cuando falta cargar la factura del período.</p>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Servicio</th><th>Titular</th><th>Nº cliente</th><th>Frecuencia</th><th class="num">Vence el día</th><th class="num">Monto estimado</th><th></th></tr></thead>
+  <tbody>
+  {% for s in services %}
+    <tr {% if not s.active %}class="muted"{% endif %}>
+      <td><a href="/servicios/{{ s.id }}/editar">{{ s.name }}</a><br><small class="muted">{{ s.provider }} · {{ s.category }}{% if not s.active %} · inactivo{% endif %}</small></td>
+      <td>{{ s.owner.name if s.owner else "" }}</td>
+      <td>{{ s.account_number }}</td>
+      <td>{{ s.frequency }}</td>
+      <td class="num">{{ s.due_day or "" }}</td>
+      <td class="num">{{ s.expected_amount|money if s.expected_amount else "" }}</td>
+      <td><a href="/facturas/nueva?service_id={{ s.id }}">+ factura</a></td>
+    </tr>
+  {% else %}<tr><td colspan="7" class="muted">Sin servicios cargados.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

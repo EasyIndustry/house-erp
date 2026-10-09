@@ -1,0 +1,23 @@
+nav .brand { text-decoration: none; }
+.muted { color: var(--pico-muted-color); }
+.grid-cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid-cards article { margin: 0; }
+.badge { display: inline-block; padding: .1rem .5rem; border-radius: 1rem; font-size: .8rem; font-weight: 600; }
+.badge.pagada { background: #d1f4dc; color: #146c2e; }
+.badge.pendiente { background: #e3ecff; color: #1d4ed8; }
+.badge.parcial { background: #fff1c2; color: #8a5a00; }
+.badge.vencida { background: #ffd9d6; color: #a1150a; }
+.badge.low { background: #ffd9d6; color: #a1150a; }
+.thumb { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; background: #fff; }
+.thumb-lg { max-width: 160px; max-height: 160px; object-fit: contain; background: #fff; border-radius: 8px; }
+.num { text-align: right; white-space: nowrap; }
+.actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.actions form { margin: 0; }
+.actions button, .actions [role=button] { margin: 0; padding: .35rem .8rem; }
+table td form { margin: 0; }
+table td button.link { padding: 0; margin: 0; background: none; border: none; color: var(--pico-del-color); width: auto; }
+#reader { max-width: 480px; margin: 0 auto 1rem; }
+.scan-result img { max-height: 120px; }
+.stock-big { font-size: 2.5rem; font-weight: 700; }
+.inline-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: end; }
+.inline-form > * { flex: 1 1 140px; margin-bottom: 0; }

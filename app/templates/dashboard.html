@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Tablero{% endblock %}
+{% block content %}
+<hgroup>
+  <h1>Tablero</h1>
+  <p>{{ today|fdate }} · {{ product_count }} productos en el inventario</p>
+</hgroup>
+
+<div class="grid-cards">
+  <article>
+    <header><strong>🧾 Facturas vencidas</strong> ({{ overdue|length }})</header>
+    {% for inv in overdue %}
+      <p><a href="/facturas/{{ inv.id }}">{{ inv.provider }}</a> · {{ inv.balance|money(inv.currency) }}
+        <br><small class="muted">venció {{ inv.due_date|fdate }} · {{ inv.owner.name if inv.owner else "" }}</small></p>
+    {% else %}<p class="muted">Nada vencido 👌</p>{% endfor %}
+  </article>
+
+  <article>
+    <header><strong>📅 Por vencer (10 días)</strong> ({{ upcoming|length }})</header>
+    {% for inv in upcoming %}
+      <p><a href="/facturas/{{ inv.id }}">{{ inv.provider }}</a> · {{ inv.balance|money(inv.currency) }}
+        <br><small class="muted">{% if inv.due_date %}vence {{ inv.due_date|fdate }}{% else %}sin vencimiento{% endif %} · {{ inv.owner.name if inv.owner else "" }}</small></p>
+    {% else %}<p class="muted">No hay facturas próximas.</p>{% endfor %}
+  </article>
+
+  <article>
+    <header><strong>🔌 Servicios sin factura cargada</strong></header>
+    {% for svc in missing_services %}
+      <p>{{ svc.name }} <a href="/facturas/nueva?service_id={{ svc.id }}">cargar factura →</a></p>
+    {% else %}<p class="muted">Todos los servicios al día.</p>{% endfor %}
+  </article>
+
+  <article>
+    <header><strong>🛒 Para comprar</strong> ({{ shopping|length }})</header>
+    {% for item in shopping[:8] %}
+      <p><a href="/stock/{{ item.product.id }}">{{ item.product.name }}</a> · faltan {{ item.to_buy|qty }} {{ item.product.unit }}</p>
+    {% else %}<p class="muted">El stock está por encima de los mínimos.</p>{% endfor %}
+    {% if shopping|length > 8 %}<a href="/stock/compras">Ver lista completa</a>{% endif %}
+  </article>
+
+  <article>
+    <header><strong>⏰ Vence pronto</strong></header>
+    {% for m in expiring %}
+      <p><a href="/stock/{{ m.product.id }}">{{ m.product.name }}</a>
+        · <span class="{{ 'badge vencida' if m.expires_on < today else '' }}">{{ m.expires_on|fdate }}</span></p>
+    {% else %}<p class="muted">Nada vence en los próximos 7 días.</p>{% endfor %}
+  </article>
+
+  <article>
+    <header><strong>💸 Pagado este mes</strong></header>
+    {% for currency, cats in spending.items() %}
+      <table>
+        {% for cat, total in cats.items() %}
+          <tr><td>{{ cat }}</td><td class="num">{{ total|money(currency) }}</td></tr>
+        {% endfor %}
+        <tr><th>Total {{ currency }}</th><th class="num">{{ cats.values()|sum|money(currency) }}</th></tr>
+      </table>
+    {% else %}<p class="muted">Todavía no hay pagos este mes.</p>{% endfor %}
+  </article>
+
+  <article>
+    <header><strong>🤝 Cuentas entre personas</strong></header>
+    {% for d in debts %}
+      <p>{{ d.debtor.name }} le debe <strong>{{ d.amount|money(d.currency) }}</strong> a {{ d.creditor.name }}</p>
+    {% else %}<p class="muted">Nadie le debe nada a nadie.</p>{% endfor %}
+    <a href="/personas">Gestionar</a>
+  </article>
+</div>
+{% endblock %}

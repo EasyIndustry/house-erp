@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Stock{% endblock %}
+{% block content %}
+<div class="actions" style="justify-content: space-between">
+  <h1>Stock</h1>
+  <div class="actions">
+    <a href="/stock/escanear" role="button">📷 Escanear</a>
+    <a href="/stock/nuevo" role="button" class="secondary">+ Producto</a>
+  </div>
+</div>
+
+<form method="get" class="inline-form">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar nombre, marca o código">
+  <select name="category">
+    <option value="">Todas las categorías</option>
+    {% for c in PRODUCT_CATEGORIES %}<option {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}
+  </select>
+  <select name="location">
+    <option value="">Todas las ubicaciones</option>
+    {% for l in locations %}<option value="{{ l.id }}" {{ 'selected' if l.id|string == location }}>{{ l.name }}</option>{% endfor %}
+  </select>
+  <label><input type="checkbox" name="low" value="1" {{ 'checked' if low }}> Bajo mínimo</label>
+  <button type="submit">Filtrar</button>
+</form>
+
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th></th><th>Producto</th><th>Categoría</th><th>Ubicación</th><th class="num">Stock</th><th class="num">Mínimo</th></tr></thead>
+  <tbody>
+  {% for p in products %}
+    <tr>
+      <td>{% if p.image_url %}<img class="thumb" src="{{ p.image_url }}" alt="" loading="lazy">{% endif %}</td>
+      <td><a href="/stock/{{ p.id }}">{{ p.name }}</a><br><small class="muted">{{ p.brand }} {{ p.package_size }}</small></td>
+      <td>{{ p.category }}</td>
+      <td>{{ p.location.name if p.location else "" }}</td>
+      <td class="num">{% if p.needs_restock %}<span class="badge low">{{ p.stock|qty }}</span>{% else %}{{ p.stock|qty }}{% endif %} {{ p.unit }}</td>
+      <td class="num">{{ p.min_stock|qty }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">No hay productos. Empezá <a href="/stock/escanear">escaneando uno</a>.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

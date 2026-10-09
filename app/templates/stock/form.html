@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if product.id else "Nuevo" }} producto{% endblock %}
+{% block content %}
+<h1>{{ "Editar producto" if product.id else "Nuevo producto" }}</h1>
+
+{% if looked_up %}
+  {% if info %}
+    <article><small>✅ Datos traídos de <strong>{{ info.source }}</strong>. Revisalos antes de guardar.</small></article>
+  {% else %}
+    <article><small>⚠️ No encontramos el código {{ product.barcode }} en las bases públicas. Completá los datos a mano.</small></article>
+  {% endif %}
+{% endif %}
+
+<form method="post" action="{{ '/stock/%d/editar' % product.id if product.id else '/stock/nuevo' }}">
+  <div class="grid">
+    <label>Código de barras
+      <input name="barcode" value="{{ product.barcode or '' }}" inputmode="numeric" autocomplete="off">
+    </label>
+    <label>Nombre *
+      <input name="name" value="{{ product.name }}" required>
+    </label>
+  </div>
+  <div class="grid">
+    <label>Marca <input name="brand" value="{{ product.brand }}"></label>
+    <label>Presentación <input name="package_size" value="{{ product.package_size }}" placeholder="ej. 1 l, 500 g"></label>
+  </div>
+  <div class="grid">
+    <label>Categoría
+      <select name="category">{% for c in PRODUCT_CATEGORIES %}<option {{ 'selected' if c == product.category }}>{{ c }}</option>{% endfor %}</select>
+    </label>
+    <label>Unidad de stock
+      <select name="unit">{% for u in UNITS %}<option {{ 'selected' if u == product.unit }}>{{ u }}</option>{% endfor %}</select>
+    </label>
+    <label>Ubicación
+      <select name="location_id"><option value="">—</option>
+        {% for l in locations %}<option value="{{ l.id }}" {{ 'selected' if l.id == product.location_id }}>{{ l.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Stock mínimo
+      <input name="min_stock" type="number" step="any" min="0" value="{{ product.min_stock|qty if product.min_stock else '' }}">
+    </label>
+  </div>
+  <label>URL de imagen <input name="image_url" value="{{ product.image_url }}"></label>
+  {% if product.image_url %}<img class="thumb-lg" src="{{ product.image_url }}" alt="">{% endif %}
+
+  {% if not product.id %}
+  <fieldset>
+    <legend>Stock inicial (opcional)</legend>
+    <div class="grid">
+      <label>Cantidad <input name="initial_qty" type="number" step="any" min="0"></label>
+      <label>Vence <input name="expires_on" type="date"></label>
+      <label>Precio unitario <input name="unit_price" type="number" step="any" min="0"></label>
+    </div>
+  </fieldset>
+  {% endif %}
+
+  <label>Notas <textarea name="notes" rows="2">{{ product.notes }}</textarea></label>
+  <button type="submit">Guardar</button>
+</form>
+{% endblock %}

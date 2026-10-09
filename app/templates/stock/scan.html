@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Escanear{% endblock %}
+{% block content %}
+<h1>Escanear producto</h1>
+<p class="muted">Usá la cámara del celular, un lector USB (funciona como teclado) o tipeá el código.</p>
+
+<div id="reader"></div>
+<div class="actions" style="justify-content:center; margin-bottom:1rem">
+  <button id="cam-toggle" class="secondary">📷 Activar cámara</button>
+</div>
+
+<form id="manual" class="inline-form">
+  <input id="code" inputmode="numeric" autocomplete="off" placeholder="Código de barras" autofocus>
+  <select id="mode" title="Qué hacer al escanear un producto existente">
+    <option value="show">Sólo mostrar</option>
+    <option value="1">Sumar 1 (guardando compras)</option>
+    <option value="-1">Restar 1 (consumo)</option>
+  </select>
+  <button type="submit">Buscar</button>
+</form>
+
+<article id="result" class="scan-result" hidden></article>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/scan.js"></script>
+{% endblock %}
