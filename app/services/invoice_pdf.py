@@ -43,8 +43,20 @@ BUILTIN_TEMPLATES = [
     ("Expensas", "expensas, liquidacion de expensas", "Expensas"),
 ]
 
-# Link de pago por defecto de algunas plantillas incluidas (tomado de sus facturas).
-BUILTIN_PAYMENT_URLS = {"Edenor": "https://www.edenordigital.com"}
+# Reglas propias de algunas plantillas incluidas (tomadas de sus facturas reales): link de
+# pago por defecto y expresiones regulares para los datos que la lectura genérica no encuentra.
+BUILTIN_RULES = {
+    "Edenor": {"payment_url": "https://www.edenordigital.com"},
+    # En el PDF de Naturgy los valores vienen separados de sus etiquetas: se ubican por posición.
+    "Naturgy": {
+        "payment_url": "https://ov.naturgy.com.ar",
+        "amount_regex": r"^\$[ \t]*([\d.]+,\d{2})[ \t]*$",
+        "due_regex": r"C\.I\.F\.[^\n]*\n\s*(\d{2}/\d{2}/\d{2,4})",
+        "issue_regex": r"C\.I\.F\.\D+\d+\s+(\d{2}/\d{2}/\d{2,4})",
+        "account_regex": r"^(\d{5,8}/\d{1,2})[ \t]*$",
+        "code_regex": r"^(?P<Red_Banelco>\d{8})[ \t]*\n(?:.*\n)?(?P<Red_Link>329\d{9})[ \t]*$",
+    },
+}
 
 MONTHS = {
     "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8,
@@ -81,6 +93,8 @@ PERIOD_RE = re.compile(r"\b(0?[1-9]|1[0-2])\s*[/-]\s*(20\d{2})\b")
 PERIOD_TEXT_RE = re.compile(r"\b([a-z]{3})[a-z]*\.?(?:\s+de)?[\s/-]*(20\d{2})\b")
 CUIT_RE = re.compile(r"\b(20|23|24|27|30|33|34)-?(\d{8})-?(\d)\b")
 NUMBER_RE = re.compile(r"\b(\d{4,5})\s*-\s*(\d{8})\b")
+# Punto de venta y número pegados, después del tipo de comprobante (sobre texto sin acentos).
+LSP_NUMBER_RE = re.compile(r"liquidacion de servicios? publicos?\D{0,12}(\d{5})(\d{8})\b")
 URL_RE = re.compile(r"(https?://[^\s<>\"')]+|www\.[^\s<>\"')]+)", re.IGNORECASE)
 
 
@@ -104,7 +118,7 @@ class ParsedInvoice:
     due_date: date | None = None
     period: str = ""
     payment_url: str = ""
-    payment_code: str = ""
+    payment_codes: list[tuple[str, str]] = field(default_factory=list)  # (etiqueta, código)
     template_id: int | None = None
     template_name: str = ""
     service_id: int | None = None
@@ -116,6 +130,13 @@ class ParsedInvoice:
     @property
     def complete(self) -> bool:
         return bool(self.provider and self.amount)
+
+    @property
+    def links(self) -> list[tuple[str, str]]:
+        """Link y códigos de pago como (etiqueta, valor), para guardarlos con la factura."""
+        url = [("Pagar online", self.payment_url)] if self.payment_url else []
+        return url + [(label or "Código de pago electrónico", code)
+                      for label, code in self.payment_codes]
 
 
 # --------------------------------------------------------------------------- PDF → datos
@@ -257,16 +278,30 @@ def _digits_token(s: str):
     return re.sub(r"\s+", "", m.group(1)) if m else None
 
 
-def _regex_value(pattern: str, text: str):
+def _regex_match(pattern: str, text: str):
     if not pattern:
         return None
     try:
-        m = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+        return re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
     except re.error:
         return None
+
+
+def _regex_value(pattern: str, text: str):
+    m = _regex_match(pattern, text)
     if not m:
         return None
     return (m.group(1) if m.groups() else m.group(0)).strip()
+
+
+def _regex_codes(pattern: str, text: str) -> list[tuple[str, str]]:
+    """Códigos de pago de la plantilla, como (etiqueta, código). Si la expresión tiene grupos
+    con nombre devuelve uno por cada uno, con el nombre como etiqueta (`Red_Link` → "Red Link")."""
+    m = _regex_match(pattern, text)
+    if not m:
+        return []
+    named = [(k.replace("_", " "), v.strip()) for k, v in m.groupdict().items() if v]
+    return named or [("", _regex_value(pattern, text))]
 
 
 def _normalize_url(url: str) -> str:
@@ -369,6 +404,15 @@ def match_template(text: str, cuit: str, templates: list) -> object | None:
     return best
 
 
+def builtin_rules(template, templates: list) -> object | None:
+    """Plantilla incluida del mismo proveedor que una del usuario (las de "Recordar este
+    proveedor" no traen reglas de lectura propias)."""
+    if template is None or template.builtin:
+        return None
+    name = fold(template.provider or template.name)
+    return next((t for t in templates if t.builtin and fold(t.provider or t.name) == name), None)
+
+
 def match_service(text: str, services: list, provider: str = ""):
     """Servicio cuyo nº de cliente aparece en la factura (o el único activo de ese proveedor)."""
     for svc in services:
@@ -435,7 +479,12 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
         result.service_id = template.service_id
 
     # 4) Campos (la regex de la plantilla tiene prioridad sobre la regla genérica).
-    tmpl_amount = _regex_value(getattr(template, "amount_regex", ""), text)
+    base = builtin_rules(template, list(templates))
+
+    def rule(name: str) -> str:
+        return getattr(template, name, "") or getattr(base, name, "")
+
+    tmpl_amount = _regex_value(rule("amount_regex"), text)
     if tmpl_amount:
         try:
             result.amount = parse_money(tmpl_amount)
@@ -448,7 +497,11 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
             amounts = [parse_money(m.group(1)) for m in MONEY_RE.finditer(text) if "$" in m.group(0)]
             result.amount = max(amounts) if amounts else None
 
-    tmpl_due = _regex_value(getattr(template, "due_regex", ""), text)
+    tmpl_issue = find_dates(_regex_value(rule("issue_regex"), text) or "")
+    if tmpl_issue:
+        result.issue_date = tmpl_issue[0]
+
+    tmpl_due = _regex_value(rule("due_regex"), text)
     due_candidates = find_dates(tmpl_due) if tmpl_due else []
     if not due_candidates:
         for i, fl in enumerate(folded):
@@ -467,17 +520,19 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
                                            lambda s: (find_dates(s) or [None])[0], lookahead=1)
 
     if not result.number:
-        m = NUMBER_RE.search(text)
+        m = NUMBER_RE.search(text) or LSP_NUMBER_RE.search(fold(text))
         if m:
             result.number = f"{int(m.group(1)):05d}-{m.group(2)}"
 
     result.account_number = (
-        _regex_value(getattr(template, "account_regex", ""), text)
+        _regex_value(rule("account_regex"), text)
         or _after_keyword(lines, folded, ACCOUNT_KEYWORDS, _account_token, lookahead=0)
         or ""
     )
-    result.payment_code = _after_keyword(lines, folded, PAYMENT_CODE_KEYWORDS, _digits_token,
-                                         lookahead=1) or ""
+    result.payment_codes = _regex_codes(rule("code_regex"), text)
+    if not result.payment_codes:
+        code = _after_keyword(lines, folded, PAYMENT_CODE_KEYWORDS, _digits_token, lookahead=1)
+        result.payment_codes = [("", code)] if code else []
 
     result.period = _find_period(lines, folded)
     if not result.period and result.issue_date:
@@ -485,7 +540,7 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
 
     result.payment_url = (
         _pick_payment_url(pdf.links + pdf.qr_codes + URL_RE.findall(text))
-        or getattr(template, "payment_url", "")
+        or rule("payment_url")
         or next((_normalize_url(q) for q in pdf.qr_codes
                  if q.lower().startswith("http") and "afip.gob.ar" not in q), "")
     )

@@ -90,3 +90,37 @@ def edenor_real_layout() -> bytes:
         "• CODIGO DE PAGO: 0012 3456 7890",
         "Subtotal $ 6.258,16",
     ], qr=emv)
+
+
+def naturgy_real_layout() -> bytes:
+    """Texto en el orden en que sale de una factura real de Naturgy (datos personales
+    reemplazados): las etiquetas van por un lado y los valores, sueltos, por otro."""
+    emv = ("000201" + emv_field("01", "12") + emv_field("43", emv_field("00", "com.totalcoin"))
+           + emv_field("50", emv_field("00", "30657864117")) + emv_field("53", "032")
+           + emv_field("58", "AR") + emv_field("59", "NATURGY BAN S. A.") + "6304ABCD")
+    return make_pdf([
+        "Medidor N°Vencimiento Sobre",
+        "TOTAL A PAGAR",
+        "Red Link:Red Banelco:",
+        "N° de cliente Total a pagar hasta el ",
+        "C.I.F.  N° 123456789 09/10/26  26/05-39 Mensual  ",
+        "26/10/26  ",
+        "1234567/1",
+        "25/11/26",
+        "$       417,82",
+        "18-'Liquidación de Servicios Públicos - B' 0004712345678",
+        "01234567",
+        "Aviso de Deuda común bajo firma: $ 4491,00  Reconexión: $   32523,00",
+        "329001234567",
+        "26/10/26",
+        "$       417,82",
+        "PEREZ , JUANA",
+        "* C.E.S.P. N° 37407000000000 Fecha de Vto.: 14/10/2026",
+        "'IMPORTANTE: Mantenga actualizado sus datos ingresando a www.naturgy.com.ar o",
+        "Anterior 06/08/26    5158",
+        "· Total por comprobantes vencidos (*): $          0,00",
+        "GAS  $  10.420,51   Cargo fijo  3.612,94",
+        "TOTAL CTOS. VINCULADOS A LA PRESTACION DEL SERVICIO(1)  $           1,00",
+        "TOTAL CTOS. NO VINCULADOS A LA PRESTACION DEL SERVICIO  $         416,82",
+        "* 50% Consumo Periodo Bimestral",
+    ], qr=emv)

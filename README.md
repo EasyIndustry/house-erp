@@ -62,14 +62,17 @@ Subís el PDF que te mandan (o lo compartís desde WhatsApp) y se lee solo:
 - Con **un PDF** te muestra la factura precargada para revisar; con **varios**, carga
   directamente las que se leyeron completas y te avisa cuáles faltan.
 - Detecta **duplicados** (mismo CUIT + número, o mismo proveedor + importe + vencimiento).
-- El PDF queda adjunto y la factura muestra **"Pagar online"** y el código de pago para copiar.
+- El PDF queda adjunto y la factura muestra **"Pagar online"** y los códigos de pago para copiar
+  (puede tener varios, ej. uno para Banelco y otro para Link).
 - **Plantillas** (`/plantillas`): vienen incluidas Edenor, Edesur, Edelap, EPEC, AySA, ABSA,
   Metrogas, Naturgy, Camuzzi, Ecogas, Telecentro, Personal/Fibertel, Movistar, Claro,
   DirecTV, ABL (AGIP), ARBA y expensas. Al guardar una factura importada con
   "Recordar este proveedor", se crea una plantilla por CUIT con el titular, categoría y
   servicio que elegiste: la próxima factura de ese proveedor ya viene asignada (ideal para
   las facturas que mandan las dueñas). Si algún proveedor tiene un formato raro, la
-  plantilla admite expresiones regulares propias para importe, vencimiento y nº de cliente;
+  plantilla admite expresiones regulares propias para importe, vencimiento, emisión, nº de
+  cliente y códigos de pago (Naturgy ya las trae, porque en su PDF los valores vienen lejos
+  de las etiquetas, y guarda un código para Banelco y otro para Link);
   en la pantalla de revisión podés ver el texto leído del PDF para armarlas.
 - Limitación: un PDF escaneado (foto) no tiene texto; de ese se lee sólo el QR.
 
@@ -107,6 +110,7 @@ app/
     barcode.py       # búsqueda de códigos en APIs públicas
     afip_qr.py       # lectura del QR de facturas electrónicas
     invoice_pdf.py   # importación de facturas PDF + plantillas por proveedor
+    links.py         # links y códigos sueltos de cualquier registro (tabla comodín `link`)
     reports.py       # alertas, gastos y saldos
   templates/         # HTML (Jinja2 + Pico CSS)
   static/            # CSS y JS de los escáneres

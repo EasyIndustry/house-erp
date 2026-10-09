@@ -11,6 +11,7 @@ from sqlmodel import Session, or_, select
 from app.db import UPLOAD_DIR, get_session
 from app.models import Invoice, InvoiceTemplate, Payment, Person, Service
 from app.services.invoice_pdf import ParsedInvoice, extract_pdf, parse_invoice
+from app.services.links import links_for, links_text, parse_links, set_links
 from app.web import opt_date, opt_float, opt_int, redirect, render
 
 router = APIRouter()
@@ -111,8 +112,6 @@ def _apply_invoice_form(invoice: Invoice, form) -> None:
     invoice.issue_date = opt_date(get("issue_date")) or date.today()
     invoice.due_date = opt_date(get("due_date"))
     invoice.account_number = get("account_number")
-    invoice.payment_url = get("payment_url")
-    invoice.payment_code = get("payment_code")
     invoice.notes = form.get("notes") or ""
 
 
@@ -155,6 +154,7 @@ async def invoice_create(request: Request, attachment: UploadFile | None = File(
     invoice.attachment = _save_attachment(attachment) or _stored_pdf(form.get("attachment_name"))
     session.add(invoice)
     session.flush()
+    set_links(session, invoice, parse_links(form.get("links")))
     if form.get("remember_template"):
         _remember_template(session, invoice)
     if form.get("paid_now"):
@@ -167,13 +167,16 @@ async def invoice_create(request: Request, attachment: UploadFile | None = File(
 
 @router.get("/facturas/{invoice_id:int}")
 def invoice_detail(request: Request, invoice_id: int, session: Session = Depends(get_session)):
-    return render(request, "invoices/detail.html", invoice=_get_invoice(session, invoice_id),
-                  people=_people(session))
+    invoice = _get_invoice(session, invoice_id)
+    return render(request, "invoices/detail.html", invoice=invoice,
+                  links=links_for(session, invoice), people=_people(session))
 
 
 @router.get("/facturas/{invoice_id:int}/editar")
 def invoice_edit(request: Request, invoice_id: int, session: Session = Depends(get_session)):
-    return render(request, "invoices/form.html", invoice=_get_invoice(session, invoice_id),
+    invoice = _get_invoice(session, invoice_id)
+    return render(request, "invoices/form.html", invoice=invoice,
+                  links_text=links_text(links_for(session, invoice)),
                   people=_people(session), services=session.exec(select(Service)).all())
 
 
@@ -188,13 +191,16 @@ async def invoice_update(request: Request, invoice_id: int,
     if new_file:
         invoice.attachment = new_file
     session.add(invoice)
+    set_links(session, invoice, parse_links(form.get("links")))
     session.commit()
     return redirect(f"/facturas/{invoice_id}")
 
 
 @router.post("/facturas/{invoice_id:int}/eliminar")
 def invoice_delete(invoice_id: int, session: Session = Depends(get_session)):
-    session.delete(_get_invoice(session, invoice_id))
+    invoice = _get_invoice(session, invoice_id)
+    set_links(session, invoice, [])
+    session.delete(invoice)
     session.commit()
     return redirect("/facturas")
 
@@ -262,8 +268,7 @@ def _invoice_from_parsed(parsed: ParsedInvoice, attachment: str) -> Invoice:
         period=parsed.period, owner_id=parsed.owner_id, service_id=parsed.service_id,
         amount=parsed.amount or 0, currency=parsed.currency,
         issue_date=parsed.issue_date or date.today(), due_date=parsed.due_date,
-        account_number=parsed.account_number, payment_url=parsed.payment_url,
-        payment_code=parsed.payment_code, attachment=attachment,
+        account_number=parsed.account_number, attachment=attachment,
     )
 
 
@@ -306,6 +311,7 @@ async def import_pdfs(request: Request, files: list[UploadFile] = File(...),
         return render(request, "invoices/form.html",
                       invoice=_invoice_from_parsed(r["parsed"], r["stored"]),
                       parsed=r["parsed"], duplicate=r["duplicate"], attachment_name=r["stored"],
+                      links_text=links_text(r["parsed"].links),
                       people=_people(session), services=session.exec(select(Service)).all())
 
     for r in results:
@@ -321,6 +327,7 @@ async def import_pdfs(request: Request, files: list[UploadFile] = File(...),
             invoice.notes = "Importada de PDF"
             session.add(invoice)
             session.flush()
+            set_links(session, invoice, parsed.links)
             r["invoice"] = invoice
     session.commit()
     return render(request, "invoices/import_results.html", results=results)
@@ -355,10 +362,10 @@ def template_save(
     template_id: str = Form(""), name: str = Form(...), keywords: str = Form(""),
     cuit: str = Form(""), provider: str = Form(""), category: str = Form("Otros"),
     owner_id: str = Form(""), service_id: str = Form(""), amount_regex: str = Form(""),
-    due_regex: str = Form(""), account_regex: str = Form(""), payment_url: str = Form(""),
-    notes: str = Form(""), session: Session = Depends(get_session),
+    due_regex: str = Form(""), issue_regex: str = Form(""), account_regex: str = Form(""),
+    code_regex: str = Form(""), payment_url: str = Form(""), notes: str = Form(""), session: Session = Depends(get_session),
 ):
-    for pattern in (amount_regex, due_regex, account_regex):
+    for pattern in (amount_regex, due_regex, issue_regex, account_regex, code_regex):
         try:
             re.compile(pattern)
         except re.error as exc:
@@ -375,7 +382,9 @@ def template_save(
     template.service_id = opt_int(service_id)
     template.amount_regex = amount_regex.strip()
     template.due_regex = due_regex.strip()
+    template.issue_regex = issue_regex.strip()
     template.account_regex = account_regex.strip()
+    template.code_regex = code_regex.strip()
     template.payment_url = payment_url.strip()
     template.notes = notes
     session.add(template)

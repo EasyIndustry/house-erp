@@ -60,11 +60,10 @@
     <label>Emisión <input name="issue_date" type="date" value="{{ invoice.issue_date.isoformat() if invoice.issue_date else '' }}"></label>
     <label>Vencimiento <input name="due_date" type="date" value="{{ invoice.due_date.isoformat() if invoice.due_date else '' }}"></label>
   </div>
-  <div class="grid">
-    <label>Nº de cliente / cuenta <input name="account_number" value="{{ invoice.account_number }}"></label>
-    <label>Código de pago electrónico <input name="payment_code" value="{{ invoice.payment_code }}" inputmode="numeric"></label>
-  </div>
-  <label>Link de pago <input name="payment_url" type="url" value="{{ invoice.payment_url }}" placeholder="https://"></label>
+  <label>Nº de cliente / cuenta <input name="account_number" value="{{ invoice.account_number }}"></label>
+  <label>Links y códigos de pago <small class="muted">(uno por renglón: <code>Etiqueta: valor</code>)</small>
+    <textarea name="links" rows="3" placeholder="Pagar online: https://…&#10;Red Link: 329001234567">{{ links_text }}</textarea>
+  </label>
   {% if attachment_name %}
     <p>📎 PDF adjunto: se guarda con la factura.</p>
   {% else %}

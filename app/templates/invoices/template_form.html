@@ -36,12 +36,15 @@
   <label>Link de pago (si el PDF no trae uno)
     <input name="payment_url" type="url" value="{{ template.payment_url }}" placeholder="https://">
   </label>
-  <details {{ 'open' if template.amount_regex or template.due_regex or template.account_regex }}>
+  <details {{ 'open' if template.amount_regex or template.due_regex or template.issue_regex or template.account_regex or template.code_regex }}>
     <summary>Avanzado: expresiones regulares</summary>
     <p class="muted"><small>Sólo si la lectura automática se equivoca con este proveedor. Cada expresión debe tener un grupo de captura <code>( )</code> con el valor. Ej. importe: <code>Total a pagar\s*\$?\s*([\d.]+,\d{2})</code></small></p>
     <label>Importe <input name="amount_regex" value="{{ template.amount_regex }}"></label>
     <label>Vencimiento <input name="due_regex" value="{{ template.due_regex }}"></label>
+    <label>Emisión <input name="issue_regex" value="{{ template.issue_regex }}"></label>
     <label>Nº de cliente <input name="account_regex" value="{{ template.account_regex }}"></label>
+    <label>Código de pago <input name="code_regex" value="{{ template.code_regex }}">
+      <small class="muted">Si hay más de uno, un grupo con nombre por cada medio de pago: <code>(?P&lt;Red_Banelco&gt;\d{8})…(?P&lt;Red_Link&gt;\d{12})</code></small></label>
   </details>
   <label>Notas <textarea name="notes" rows="2">{{ template.notes }}</textarea></label>
   <button type="submit">Guardar</button>

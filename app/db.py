@@ -18,6 +18,7 @@ def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     SQLModel.metadata.create_all(engine)
+    migrate_payment_links()
     add_missing_columns()
     with Session(engine) as session:
         seed_defaults(session)
@@ -54,6 +55,22 @@ def add_missing_columns() -> None:
                 conn.execute(text(ddl))
 
 
+def migrate_payment_links() -> None:
+    """Versiones anteriores guardaban un link y un código de pago en columnas de la factura:
+    se pasan a la tabla `link` y se eliminan esas columnas."""
+    old = {"payment_url": "Pagar online", "payment_code": "Código de pago electrónico"}
+    existing = {c["name"] for c in inspect(engine).get_columns("invoice")}
+    with engine.begin() as conn:
+        for column, label in old.items():
+            if column not in existing:
+                continue
+            conn.execute(text(
+                "INSERT INTO link (ref_table, ref_id, label, value) "
+                f"SELECT 'invoice', id, :label, {column} FROM invoice "
+                f"WHERE COALESCE({column}, '') != ''"), {"label": label})
+            conn.execute(text(f'ALTER TABLE invoice DROP COLUMN "{column}"'))
+
+
 def seed_defaults(session: Session) -> None:
     """Crea los datos mínimos para arrancar: la persona 'Casa' y ubicaciones típicas."""
     from app.models import Location, Person
@@ -68,7 +85,7 @@ def seed_defaults(session: Session) -> None:
 
 def seed_invoice_templates(session: Session) -> None:
     from app.models import InvoiceTemplate
-    from app.services.invoice_pdf import BUILTIN_PAYMENT_URLS, BUILTIN_TEMPLATES
+    from app.services.invoice_pdf import BUILTIN_RULES, BUILTIN_TEMPLATES
 
     existing = {t.name: t for t in session.exec(
         select(InvoiceTemplate).where(InvoiceTemplate.builtin == True))}  # noqa: E712
@@ -80,8 +97,9 @@ def seed_invoice_templates(session: Session) -> None:
                 continue
             template = InvoiceTemplate(name=name, provider=name, keywords=keywords,
                                        category=category, builtin=True)
-        if not template.payment_url and name in BUILTIN_PAYMENT_URLS:
-            template.payment_url = BUILTIN_PAYMENT_URLS[name]
+        for field, value in BUILTIN_RULES.get(name, {}).items():
+            if not getattr(template, field):
+                setattr(template, field, value)
         session.add(template)
     session.commit()
 

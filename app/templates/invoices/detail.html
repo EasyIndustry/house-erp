@@ -30,14 +30,17 @@
   </article>
 </div>
 
-{% if invoice.balance > 0 and (invoice.payment_url or invoice.payment_code) %}
+{% if invoice.balance > 0 and links %}
 <article class="pay-box">
-  {% if invoice.payment_url %}<a href="{{ invoice.payment_url }}" target="_blank" rel="noopener" role="button">💳 Pagar online</a>{% endif %}
-  {% if invoice.payment_code %}
-    <div>Código de pago electrónico: <span class="code" id="pay-code">{{ invoice.payment_code }}</span>
+  {% for link in links %}
+  {% if link.is_url %}
+    <a href="{{ link.value }}" target="_blank" rel="noopener" role="button">💳 {{ link.label or "Pagar online" }}</a>
+  {% else %}
+    <div>{{ link.label or "Código de pago electrónico" }}: <span class="code">{{ link.value }}</span>
       <button type="button" class="secondary outline" style="padding:.2rem .6rem; width:auto"
-        onclick="navigator.clipboard.writeText(document.getElementById('pay-code').textContent).then(() => this.textContent = '¡Copiado!')">Copiar</button></div>
+        onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(() => this.textContent = '¡Copiado!')">Copiar</button></div>
   {% endif %}
+  {% endfor %}
 </article>
 {% endif %}
 

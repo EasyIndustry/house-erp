@@ -120,8 +120,6 @@ class Invoice(SQLModel, table=True):
     issue_date: date = Field(default_factory=date.today)
     due_date: Optional[date] = None
     account_number: str = ""  # nro. de cliente / cuenta que figura en la factura
-    payment_url: str = ""  # link de pago online
-    payment_code: str = ""  # código de pago electrónico (Link / Pago Mis Cuentas / Rapipago)
     attachment: str = ""  # nombre de archivo dentro de data/uploads
     notes: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -179,6 +177,21 @@ class Settlement(SQLModel, table=True):
     notes: str = ""
 
 
+class Link(SQLModel, table=True):
+    """Link o código suelto de cualquier registro: el link de pago de una factura, sus códigos
+    de Banelco/Link, el portal de un servicio… `ref_table` + `ref_id` dicen de quién es."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ref_table: str = Field(index=True)  # nombre de la tabla dueña, ej. "invoice"
+    ref_id: int = Field(index=True)
+    label: str = ""
+    value: str  # URL (se abre) o código (se copia)
+
+    @property
+    def is_url(self) -> bool:
+        return self.value.lower().startswith(("http://", "https://"))
+
+
 class InvoiceTemplate(SQLModel, table=True):
     """Reglas para reconocer las facturas en PDF de un proveedor.
 
@@ -197,7 +210,9 @@ class InvoiceTemplate(SQLModel, table=True):
     service_id: Optional[int] = Field(default=None, foreign_key="service.id")
     amount_regex: str = ""
     due_regex: str = ""
+    issue_regex: str = ""
     account_regex: str = ""
+    code_regex: str = ""  # código de pago; con grupos con nombre, uno por cada medio de pago
     payment_url: str = ""  # link de pago a usar si el PDF no trae uno
     builtin: bool = False
     notes: str = ""
