@@ -68,13 +68,21 @@ def seed_defaults(session: Session) -> None:
 
 def seed_invoice_templates(session: Session) -> None:
     from app.models import InvoiceTemplate
-    from app.services.invoice_pdf import BUILTIN_TEMPLATES
+    from app.services.invoice_pdf import BUILTIN_PAYMENT_URLS, BUILTIN_TEMPLATES
 
-    if session.exec(select(InvoiceTemplate).where(InvoiceTemplate.builtin == True)).first():  # noqa: E712
-        return
+    existing = {t.name: t for t in session.exec(
+        select(InvoiceTemplate).where(InvoiceTemplate.builtin == True))}  # noqa: E712
     for name, keywords, category in BUILTIN_TEMPLATES:
-        session.add(InvoiceTemplate(name=name, provider=name, keywords=keywords,
-                                    category=category, builtin=True))
+        template = existing.get(name)
+        if template is None:
+            # Si el usuario borró o editó una incluida, no se la vuelve a crear con otro nombre.
+            if existing:
+                continue
+            template = InvoiceTemplate(name=name, provider=name, keywords=keywords,
+                                       category=category, builtin=True)
+        if not template.payment_url and name in BUILTIN_PAYMENT_URLS:
+            template.payment_url = BUILTIN_PAYMENT_URLS[name]
+        session.add(template)
     session.commit()
 
 

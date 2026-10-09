@@ -198,6 +198,7 @@ class InvoiceTemplate(SQLModel, table=True):
     amount_regex: str = ""
     due_regex: str = ""
     account_regex: str = ""
+    payment_url: str = ""  # link de pago a usar si el PDF no trae uno
     builtin: bool = False
     notes: str = ""
 

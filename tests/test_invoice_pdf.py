@@ -6,7 +6,7 @@ from sqlmodel import select
 from app.models import Invoice, InvoiceTemplate, Person, Service
 from app.services.invoice_pdf import (ExtractedPdf, extract_pdf, find_dates, parse_invoice,
                                       parse_money, valid_cuit)
-from tests.pdf_samples import afip_qr_url, edenor_like, make_pdf, unknown_provider
+from tests.pdf_samples import afip_qr_url, edenor_like, edenor_real_layout, make_pdf, unknown_provider
 
 
 def templates(session):
@@ -47,6 +47,27 @@ def test_parse_known_provider(session):
     assert parsed.payment_code == "00123456789012"
     assert parsed.payment_url == "https://www.edenor.com/pagos/factura?id=abc123"
     assert parsed.warnings == []
+
+
+def test_parse_real_edenor_layout(session):
+    """Regresión con el formato de una factura real de Edenor (sin QR de ARCA, con QR de pago)."""
+    parsed = parse_invoice(extract_pdf(edenor_real_layout()), templates(session))
+    assert parsed.template_name == "Edenor"
+    assert parsed.provider_cuit == "30655116202"  # sacado del QR "Pagá con QR"
+    assert parsed.amount == 6258.16
+    # Ignora "Fecha de Vencimiento" del C.E.S.P. y "La próxima liquidación vence".
+    assert parsed.due_date == date(2026, 10, 7)
+    assert parsed.issue_date == date(2026, 9, 23)
+    assert parsed.number == "00027-11112222"
+    assert parsed.account_number == "1234567890"
+    assert parsed.payment_code == "001234567890"
+    assert parsed.period == "2026-09"
+    assert parsed.payment_url == "https://www.edenordigital.com"  # link de la plantilla
+
+
+def test_emv_qr_gives_provider_without_template():
+    parsed = parse_invoice(extract_pdf(edenor_real_layout()), [])
+    assert parsed.provider == "Edenor S.A." and parsed.provider_cuit == "30655116202"
 
 
 def test_parse_without_qr_or_template(session):

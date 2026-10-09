@@ -23,7 +23,7 @@ from app.services.afip_qr import InvalidAfipQR, parse_afip_qr
 
 # (nombre, palabras clave, categoría). Se cargan como plantillas editables en la base.
 BUILTIN_TEMPLATES = [
-    ("Edenor", "edenor", "Luz"),
+    ("Edenor", "edenor, empresa distribuidora y comercializadora norte", "Luz"),
     ("Edesur", "edesur", "Luz"),
     ("Edelap", "edelap", "Luz"),
     ("EPEC", "epec, empresa provincial de energia de cordoba", "Luz"),
@@ -43,6 +43,9 @@ BUILTIN_TEMPLATES = [
     ("Expensas", "expensas, liquidacion de expensas", "Expensas"),
 ]
 
+# Link de pago por defecto de algunas plantillas incluidas (tomado de sus facturas).
+BUILTIN_PAYMENT_URLS = {"Edenor": "https://www.edenordigital.com"}
+
 MONTHS = {
     "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8,
     "sep": 9, "set": 9, "oct": 10, "nov": 11, "dic": 12,
@@ -53,13 +56,13 @@ AMOUNT_KEYWORDS = [
     "importe a abonar", "su pago", "total factura", "importe total", "total del periodo", "total",
 ]
 DUE_KEYWORDS = ["vencimiento", "vence", "vto", "pagar hasta", "fecha limite de pago"]
-DUE_EXCLUDE = ["cae", "proximo", "prox.", "siguiente"]
+DUE_EXCLUDE = ["cae", "c.e.s.p", "cesp", "proxim", "prox.", "siguiente", "transcurrida"]
 ISSUE_KEYWORDS = ["fecha de emision", "emision", "fecha de factura", "fecha factura"]
 ACCOUNT_KEYWORDS = [
     "numero de cliente", "nro. de cliente", "nro de cliente", "n° de cliente", "nº de cliente",
     "cliente n", "nro. cliente", "nro cliente", "numero de cuenta", "nro. de cuenta",
     "nro de cuenta", "n° de cuenta", "nº de cuenta", "no de cliente", "no de cuenta",
-    "cuenta n", "cuenta:", "cliente:", "suministro",
+    "cuenta n", "cuenta:", "cliente:", "suministro", "cuenta",
     "nis", "numero de usuario", "partida", "unidad funcional",
 ]
 PAYMENT_CODE_KEYWORDS = [
@@ -242,10 +245,10 @@ def _first_money(s: str):
 
 
 def _account_token(s: str):
-    m = re.search(r"([0-9][0-9\-/.]{2,}[0-9])", s)
+    m = re.match(r"[\s:#°º.nro]*([0-9](?:[0-9\-/.]| (?=\d{3}))*[0-9])", s, re.IGNORECASE)
     if not m or NUM_DATE_RE.fullmatch(m.group(1)):
         return None
-    token = m.group(1)
+    token = m.group(1).replace(" ", "")
     return token if sum(c.isdigit() for c in token) >= 4 else None
 
 
@@ -291,6 +294,59 @@ def _guess_provider_name(lines: list[str]) -> str:
         if re.search(r"\bS\.?\s?A\.?(\s?U\.?)?\b|\bS\.?R\.?L\.?\b", line) and len(line) < 70:
             return re.sub(r"\s+", " ", line).strip(" -")
     return lines[0][:60] if lines else ""
+
+
+def _find_period(lines: list[str], folded: list[str]) -> str:
+    for kw in ("periodo", "mes de consumo", "liquidacion"):
+        for i, fl in enumerate(folded):
+            if kw not in fl:
+                continue
+            nxt = lines[i + 1] if i + 1 < len(lines) else ""
+            dates = find_dates(lines[i]) or find_dates(nxt)
+            if dates:
+                return max(dates).strftime("%Y-%m")
+            chunk = fl + " " + fold(nxt)
+            m = PERIOD_RE.search(chunk)
+            if m:
+                return f"{m.group(2)}-{int(m.group(1)):02d}"
+            m = PERIOD_TEXT_RE.search(chunk)
+            if m and m.group(1) in MONTHS:
+                return f"{m.group(2)}-{MONTHS[m.group(1)]:02d}"
+    return ""
+
+
+def parse_emv_qr(payload: str) -> dict:
+    """QR de pago interoperable (estándar EMVCo, el "Pagá con QR" de las facturas).
+
+    Devuelve los campos de primer nivel ({"59": "EDENOR S.A.", ...}) o {} si no es EMVCo.
+    """
+    if not payload.startswith("000201"):
+        return {}
+    return _parse_tlv(payload)
+
+
+def _parse_tlv(payload: str) -> dict:
+    fields, i = {}, 0
+    while i + 4 <= len(payload):
+        tag, length = payload[i:i + 2], payload[i + 2:i + 4]
+        if not length.isdigit():
+            return {}
+        end = i + 4 + int(length)
+        if end > len(payload):
+            return {}
+        fields[tag] = payload[i + 4:end]
+        i = end
+    return fields
+
+
+def _emv_cuit(fields: dict) -> str:
+    """CUIT del comercio: en Argentina va en alguna plantilla 26-51 como un número de 11 dígitos."""
+    for tag in sorted(fields):
+        if "26" <= tag <= "51":
+            for value in _parse_tlv(fields[tag]).values():
+                if len(value) == 11 and value[:2] in ("30", "33", "34") and valid_cuit(value):
+                    return value
+    return ""
 
 
 # --------------------------------------------------------------------------- análisis
@@ -351,6 +407,16 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
         result.currency = afip["currency"]
         result.issue_date = date.fromisoformat(afip["issue_date"]) if afip["issue_date"] else None
 
+    # 1b) QR de pago interoperable: CUIT y nombre del comercio.
+    emv = next((f for f in map(parse_emv_qr, pdf.qr_codes) if f), {})
+    if emv and not result.provider_cuit:
+        result.provider_cuit = _emv_cuit(emv)
+    if emv.get("54") and result.amount is None:
+        try:
+            result.amount = float(emv["54"])
+        except ValueError:
+            pass
+
     # 2) CUIT del emisor por texto (el primero válido de empresa).
     if not result.provider_cuit:
         cuits = ["".join(m.groups()) for m in CUIT_RE.finditer(text)]
@@ -407,31 +473,22 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
 
     result.account_number = (
         _regex_value(getattr(template, "account_regex", ""), text)
-        or _after_keyword(lines, folded, ACCOUNT_KEYWORDS, _account_token, lookahead=1)
+        or _after_keyword(lines, folded, ACCOUNT_KEYWORDS, _account_token, lookahead=0)
         or ""
     )
     result.payment_code = _after_keyword(lines, folded, PAYMENT_CODE_KEYWORDS, _digits_token,
                                          lookahead=1) or ""
 
-    for i, fl in enumerate(folded):
-        if "periodo" in fl or "mes de consumo" in fl or "liquidacion" in fl:
-            chunk = fl + " " + (folded[i + 1] if i + 1 < len(folded) else "")
-            m = PERIOD_RE.search(chunk)
-            if m:
-                result.period = f"{m.group(2)}-{int(m.group(1)):02d}"
-                break
-            m = PERIOD_TEXT_RE.search(chunk)
-            if m and m.group(1) in MONTHS:
-                result.period = f"{m.group(2)}-{MONTHS[m.group(1)]:02d}"
-                break
-            dates = find_dates(lines[i])
-            if dates:
-                result.period = max(dates).strftime("%Y-%m")
-                break
+    result.period = _find_period(lines, folded)
     if not result.period and result.issue_date:
         result.period = result.issue_date.strftime("%Y-%m")
 
-    result.payment_url = _pick_payment_url(pdf.links + pdf.qr_codes + URL_RE.findall(text))
+    result.payment_url = (
+        _pick_payment_url(pdf.links + pdf.qr_codes + URL_RE.findall(text))
+        or getattr(template, "payment_url", "")
+        or next((_normalize_url(q) for q in pdf.qr_codes
+                 if q.lower().startswith("http") and "afip.gob.ar" not in q), "")
+    )
 
     # 5) Servicio: por nº de cliente en el texto, o único servicio del proveedor.
     if not result.service_id:
@@ -442,6 +499,8 @@ def parse_invoice(pdf: ExtractedPdf, templates: list = (), services: list = ()) 
             result.category = result.category or svc.category
             result.provider = result.provider or svc.provider or svc.name
 
+    if not result.provider and emv.get("59"):
+        result.provider = emv["59"].strip().title().replace("S.a.", "S.A.")
     if not result.provider:
         result.provider = _guess_provider_name(lines)
         if result.provider:

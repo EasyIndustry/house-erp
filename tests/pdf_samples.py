@@ -62,3 +62,31 @@ def unknown_provider() -> bytes:
         "Vence el 20 de octubre de 2026",
         "Pagá en www.coopoeste.com.ar/pagar",
     ])
+
+
+def emv_field(tag: str, value: str) -> str:
+    return f"{tag}{len(value):02d}{value}"
+
+
+def edenor_real_layout() -> bytes:
+    """Mismo formato que una factura real de Edenor (datos personales reemplazados)."""
+    merchant = emv_field("00", "30655116202") + emv_field("01", "2")
+    emv = ("000201" + emv_field("01", "12") + emv_field("43", emv_field("00", "com.auntap"))
+           + emv_field("50", merchant) + emv_field("53", "032") + emv_field("58", "AR")
+           + emv_field("59", "EDENOR S.A.") + emv_field("60", "Buenos Aires") + "6304ABCD")
+    return make_pdf([
+        "Empresa Distribuidora y Comercializadora Norte S. A.",
+        "B Liquidación de Servicio Público N° 0027-11112222 Emisión 23/09/2026 C.A.B.A.",
+        "C.E.S.P Nº 37382000000000 Fecha de Vencimiento: 30/09/2026",
+        "Datos del cliente",
+        "Cuenta 1 234 567 890",
+        "PEREZ JUANA",
+        "Total AL VENCIMIENTO 07/10/2026 $ 6.258,16",
+        "Total AL 2do. VENCIMIENTO 13/10/2026 $ 6.283,56",
+        "Hasta el 07/10/2026",
+        "TOTAL A PAGAR $ 6.258,16",
+        "La próxima liquidación vence el 10/11/2026",
+        "Período de consumo: 25/08/2026 AL 23/09/2026",
+        "• CODIGO DE PAGO: 0012 3456 7890",
+        "Subtotal $ 6.258,16",
+    ], qr=emv)

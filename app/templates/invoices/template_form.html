@@ -33,6 +33,9 @@
       </label>
     </div>
   </fieldset>
+  <label>Link de pago (si el PDF no trae uno)
+    <input name="payment_url" type="url" value="{{ template.payment_url }}" placeholder="https://">
+  </label>
   <details {{ 'open' if template.amount_regex or template.due_regex or template.account_regex }}>
     <summary>Avanzado: expresiones regulares</summary>
     <p class="muted"><small>Sólo si la lectura automática se equivoca con este proveedor. Cada expresión debe tener un grupo de captura <code>( )</code> con el valor. Ej. importe: <code>Total a pagar\s*\$?\s*([\d.]+,\d{2})</code></small></p>

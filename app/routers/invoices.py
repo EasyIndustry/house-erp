@@ -355,8 +355,8 @@ def template_save(
     template_id: str = Form(""), name: str = Form(...), keywords: str = Form(""),
     cuit: str = Form(""), provider: str = Form(""), category: str = Form("Otros"),
     owner_id: str = Form(""), service_id: str = Form(""), amount_regex: str = Form(""),
-    due_regex: str = Form(""), account_regex: str = Form(""), notes: str = Form(""),
-    session: Session = Depends(get_session),
+    due_regex: str = Form(""), account_regex: str = Form(""), payment_url: str = Form(""),
+    notes: str = Form(""), session: Session = Depends(get_session),
 ):
     for pattern in (amount_regex, due_regex, account_regex):
         try:
@@ -376,6 +376,7 @@ def template_save(
     template.amount_regex = amount_regex.strip()
     template.due_regex = due_regex.strip()
     template.account_regex = account_regex.strip()
+    template.payment_url = payment_url.strip()
     template.notes = notes
     session.add(template)
     session.commit()
