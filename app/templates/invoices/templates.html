@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Plantillas{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Plantillas</h1>
+  <a href="/plantillas/nueva" role="button" class="secondary outline">+ Nueva</a>
+</div>
+<p class="muted">Cada plantilla dice cómo reconocer las facturas PDF de un proveedor (por CUIT o por palabras del texto) y qué titular, categoría y servicio asignarles. Se crean solas cuando importás una factura y marcás “Recordar este proveedor”.</p>
+<div class="list">
+  {% for t in templates %}
+    <a class="item" href="/plantillas/{{ t.id }}/editar">
+      <span class="grow"><span class="title">{{ t.name }}</span>
+        <span class="sub">{{ t.category }}{% if t.cuit %} · CUIT {{ t.cuit }}{% endif %}{% if t.keywords %} · “{{ t.keywords }}”{% endif %}{% if t.owner %} · {{ t.owner.name }}{% endif %}</span></span>
+      {% if t.builtin %}<span class="badge pendiente">incluida</span>{% else %}<span class="badge pagada">tuya</span>{% endif %}
+    </a>
+  {% endfor %}
+</div>
+{% endblock %}

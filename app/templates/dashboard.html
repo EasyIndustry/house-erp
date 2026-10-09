@@ -1,41 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Tablero{% endblock %}
+{% block title %}Inicio{% endblock %}
 {% block content %}
 <hgroup>
-  <h1>Tablero</h1>
-  <p>{{ today|fdate }} · {{ product_count }} productos en el inventario</p>
+  <h1>Hola 👋</h1>
+  <p>{{ today|fdate }}</p>
 </hgroup>
 
+<div class="stats">
+  <a class="stat {{ 'bad' if overdue }}" href="/facturas?status=vencida"><b>{{ overdue|length }}</b><small>facturas vencidas</small></a>
+  <a class="stat" href="/facturas?status=pendiente"><b>{{ upcoming|length }}</b><small>por vencer (10 días)</small></a>
+  <a class="stat {{ 'bad' if shopping }}" href="/stock/compras"><b>{{ shopping|length }}</b><small>para comprar</small></a>
+  <a class="stat" href="/stock"><b>{{ product_count }}</b><small>productos</small></a>
+</div>
+
+<div class="actions" style="margin-bottom:1rem">
+  <a href="/facturas/importar" role="button">📄 Importar factura</a>
+  <a href="/stock/escanear" role="button" class="secondary">📷 Escanear</a>
+</div>
+
+{% if overdue or upcoming %}
+<h2>Facturas a pagar</h2>
+<div class="list">
+  {% for inv in overdue + upcoming %}
+    <a class="item" href="/facturas/{{ inv.id }}">
+      <span class="grow"><span class="title">{{ inv.provider }}</span>
+        <span class="sub">{{ inv.owner.name if inv.owner else "" }}{% if inv.due_date %} · vence {{ inv.due_date|fdate }}{% endif %}</span></span>
+      <span class="right"><span class="big">{{ inv.balance|money(inv.currency) }}</span><br><span class="badge {{ inv.status }}">{{ inv.status }}</span></span>
+    </a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="grid-cards">
+  {% if missing_services %}
   <article>
-    <header><strong>🧾 Facturas vencidas</strong> ({{ overdue|length }})</header>
-    {% for inv in overdue %}
-      <p><a href="/facturas/{{ inv.id }}">{{ inv.provider }}</a> · {{ inv.balance|money(inv.currency) }}
-        <br><small class="muted">venció {{ inv.due_date|fdate }} · {{ inv.owner.name if inv.owner else "" }}</small></p>
-    {% else %}<p class="muted">Nada vencido 👌</p>{% endfor %}
-  </article>
-
-  <article>
-    <header><strong>📅 Por vencer (10 días)</strong> ({{ upcoming|length }})</header>
-    {% for inv in upcoming %}
-      <p><a href="/facturas/{{ inv.id }}">{{ inv.provider }}</a> · {{ inv.balance|money(inv.currency) }}
-        <br><small class="muted">{% if inv.due_date %}vence {{ inv.due_date|fdate }}{% else %}sin vencimiento{% endif %} · {{ inv.owner.name if inv.owner else "" }}</small></p>
-    {% else %}<p class="muted">No hay facturas próximas.</p>{% endfor %}
-  </article>
-
-  <article>
-    <header><strong>🔌 Servicios sin factura cargada</strong></header>
+    <header><strong>🔌 Falta la factura de</strong></header>
     {% for svc in missing_services %}
-      <p>{{ svc.name }} <a href="/facturas/nueva?service_id={{ svc.id }}">cargar factura →</a></p>
-    {% else %}<p class="muted">Todos los servicios al día.</p>{% endfor %}
+      <p>{{ svc.name }} · <a href="/facturas/importar">importar PDF</a> o <a href="/facturas/nueva?service_id={{ svc.id }}">cargar</a></p>
+    {% endfor %}
   </article>
+  {% endif %}
 
   <article>
-    <header><strong>🛒 Para comprar</strong> ({{ shopping|length }})</header>
-    {% for item in shopping[:8] %}
+    <header><strong>🛒 Para comprar</strong></header>
+    {% for item in shopping[:6] %}
       <p><a href="/stock/{{ item.product.id }}">{{ item.product.name }}</a> · faltan {{ item.to_buy|qty }} {{ item.product.unit }}</p>
     {% else %}<p class="muted">El stock está por encima de los mínimos.</p>{% endfor %}
-    {% if shopping|length > 8 %}<a href="/stock/compras">Ver lista completa</a>{% endif %}
+    {% if shopping|length > 6 %}<a href="/stock/compras">Ver lista completa</a>{% endif %}
   </article>
 
   <article>

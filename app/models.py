@@ -119,6 +119,9 @@ class Invoice(SQLModel, table=True):
     currency: str = "ARS"
     issue_date: date = Field(default_factory=date.today)
     due_date: Optional[date] = None
+    account_number: str = ""  # nro. de cliente / cuenta que figura en la factura
+    payment_url: str = ""  # link de pago online
+    payment_code: str = ""  # código de pago electrónico (Link / Pago Mis Cuentas / Rapipago)
     attachment: str = ""  # nombre de archivo dentro de data/uploads
     notes: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -174,3 +177,33 @@ class Settlement(SQLModel, table=True):
     currency: str = "ARS"
     date: dt.date = Field(default_factory=dt.date.today)
     notes: str = ""
+
+
+class InvoiceTemplate(SQLModel, table=True):
+    """Reglas para reconocer las facturas en PDF de un proveedor.
+
+    Se identifica por CUIT o por palabras clave en el texto. Las expresiones regulares son
+    opcionales: sólo hacen falta si la lectura genérica no encuentra bien algún dato.
+    Cada expresión debe tener un grupo de captura con el valor.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    keywords: str = ""  # separadas por coma; alcanza con que aparezca una
+    cuit: str = ""
+    provider: str = ""
+    category: str = "Otros"
+    owner_id: Optional[int] = Field(default=None, foreign_key="person.id")
+    service_id: Optional[int] = Field(default=None, foreign_key="service.id")
+    amount_regex: str = ""
+    due_regex: str = ""
+    account_regex: str = ""
+    builtin: bool = False
+    notes: str = ""
+
+    owner: Optional[Person] = Relationship()
+    service: Optional[Service] = Relationship()
+
+    @property
+    def keyword_list(self) -> list[str]:
+        return [k.strip() for k in self.keywords.split(",") if k.strip()]

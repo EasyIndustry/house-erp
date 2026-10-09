@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Importar factura{% endblock %}
+{% block content %}
+<h1>Importar factura PDF</h1>
+<p class="muted">Subí el PDF que te mandaron y se completa solo: proveedor, importe, vencimiento, nº de cliente, código y link de pago. Si es un solo PDF lo revisás antes de guardar; si son varios se cargan directo.</p>
+
+<form method="post" action="/facturas/importar" enctype="multipart/form-data" id="import-form">
+  <label class="dropzone">
+    <input type="file" name="files" accept="application/pdf,.pdf" multiple required
+           onchange="this.form.querySelector('[data-files]').textContent = [...this.files].map(f => f.name).join(', '); this.form.requestSubmit()">
+    <b>📄 Elegir PDF</b>
+    <small class="muted" data-files>Tocá para elegir uno o varios archivos</small>
+  </label>
+  <noscript><button type="submit">Importar</button></noscript>
+</form>
+<p class="muted" id="busy" hidden aria-busy="true">Leyendo la factura…</p>
+
+<article>
+  <header><strong>📲 Más rápido desde el celular</strong></header>
+  <p><small>Instalá la app (menú del navegador → <b>Instalar app</b> / <b>Agregar a pantalla de inicio</b>). Después, en WhatsApp o Gmail, mantené apretado el PDF → <b>Compartir</b> → <b>Casa</b>, y la factura se abre ya leída. (Compartir funciona en Android con Chrome; en iPhone, guardá el PDF en Archivos y elegilo acá.)</small></p>
+</article>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById("import-form").addEventListener("submit", () => document.getElementById("busy").hidden = false);
+</script>
+{% endblock %}

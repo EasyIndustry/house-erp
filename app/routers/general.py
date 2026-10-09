@@ -4,10 +4,11 @@ import io
 from datetime import date
 
 from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlmodel import Session, select
 
 from app.db import get_session
+from app.web import STATIC_DIR
 from app.models import Invoice, Location, Person, Product, Settlement, StockMovement
 from app.services import reports
 from app.services.afip_qr import InvalidAfipQR, parse_afip_qr
@@ -31,6 +32,17 @@ def dashboard(request: Request, session: Session = Depends(get_session)):
         debts=reports.balances(session),
         product_count=len(session.exec(select(Product.id)).all()),
     )
+
+
+@router.get("/mas")
+def more_page(request: Request):
+    return render(request, "more.html")
+
+
+@router.get("/sw.js", include_in_schema=False)
+def service_worker():
+    # Servido desde la raíz para que su alcance sea toda la app.
+    return FileResponse(STATIC_DIR / "sw.js", media_type="application/javascript")
 
 
 # --------------------------------------------------------------------------- personas
@@ -98,7 +110,7 @@ def api_barcode(code: str, session: Session = Depends(get_session)):
     return {"exists": False, "found": info is not None, "info": info.to_dict() if info else None}
 
 
-@router.post("/api/stock/{product_id}/ajustar")
+@router.post("/api/stock/{product_id:int}/ajustar")
 def api_quick_move(product_id: int, payload: dict = Body(...), session: Session = Depends(get_session)):
     """Suma o resta unidades rápido desde el escáner. payload: {"delta": 1}."""
     product = session.get(Product, product_id)

@@ -2,31 +2,42 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f6f5c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>{% block title %}Casa{% endblock %} · House ERP</title>
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
   <link rel="stylesheet" href="/static/app.css">
 </head>
+{% set section = section|default("") %}
 <body>
-  <header class="container">
-    <nav>
-      <ul><li><a href="/" class="brand"><strong>🏠 House ERP</strong></a></li></ul>
-      <ul>
-        <li><a href="/stock">Stock</a></li>
-        <li><a href="/stock/escanear">Escanear</a></li>
-        <li><a href="/stock/compras">Compras</a></li>
-        <li><a href="/facturas">Facturas</a></li>
-        <li><a href="/servicios">Servicios</a></li>
-        <li><a href="/personas">Personas</a></li>
-      </ul>
+  <header class="appbar">
+    <a href="/" class="appbar-brand">🏠 <span>House ERP</span></a>
+    <nav class="desktop-nav">
+      <a href="/stock">Stock</a><a href="/stock/compras">Compras</a><a href="/facturas">Facturas</a>
+      <a href="/servicios">Servicios</a><a href="/plantillas">Plantillas</a><a href="/personas">Personas</a>
     </nav>
   </header>
-  <main class="container">
+
+  <main class="container page">
     {% block content %}{% endblock %}
   </main>
-  <footer class="container muted">
-    <small>Exportar: <a href="/exportar/stock.csv">stock.csv</a> · <a href="/exportar/facturas.csv">facturas.csv</a></small>
-  </footer>
+
+  <nav class="tabbar" aria-label="Navegación principal">
+    <a href="/" class="{{ 'active' if section == 'home' }}"><span>🏠</span>Inicio</a>
+    <a href="/stock" class="{{ 'active' if section == 'stock' }}"><span>📦</span>Stock</a>
+    <a href="/stock/escanear" class="tab-scan" aria-label="Escanear"><span>📷</span></a>
+    <a href="/facturas" class="{{ 'active' if section == 'facturas' }}"><span>🧾</span>Facturas</a>
+    <a href="/mas" class="{{ 'active' if section == 'mas' }}"><span>☰</span>Más</a>
+  </nav>
   {% block scripts %}{% endblock %}
+  <script>
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  </script>
 </body>
 </html>

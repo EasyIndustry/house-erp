@@ -12,6 +12,7 @@
     {% if invoice.service %}<p>Servicio: {{ invoice.service.name }}</p>{% endif %}
     {% if invoice.number %}<p>Comprobante: {{ invoice.number }}</p>{% endif %}
     {% if invoice.provider_cuit %}<p>CUIT: {{ invoice.provider_cuit }}</p>{% endif %}
+    {% if invoice.account_number %}<p>Nº de cliente: {{ invoice.account_number }}</p>{% endif %}
     <p>Emisión: {{ invoice.issue_date|fdate }} · Vence: {{ invoice.due_date|fdate if invoice.due_date else "—" }}</p>
     {% if invoice.attachment %}<p><a href="/facturas/{{ invoice.id }}/adjunto" target="_blank">📎 Ver adjunto</a></p>{% endif %}
     {% if invoice.notes %}<p>{{ invoice.notes }}</p>{% endif %}
@@ -28,6 +29,17 @@
     </div>
   </article>
 </div>
+
+{% if invoice.balance > 0 and (invoice.payment_url or invoice.payment_code) %}
+<article class="pay-box">
+  {% if invoice.payment_url %}<a href="{{ invoice.payment_url }}" target="_blank" rel="noopener" role="button">💳 Pagar online</a>{% endif %}
+  {% if invoice.payment_code %}
+    <div>Código de pago electrónico: <span class="code" id="pay-code">{{ invoice.payment_code }}</span>
+      <button type="button" class="secondary outline" style="padding:.2rem .6rem; width:auto"
+        onclick="navigator.clipboard.writeText(document.getElementById('pay-code').textContent).then(() => this.textContent = '¡Copiado!')">Copiar</button></div>
+  {% endif %}
+</article>
+{% endif %}
 
 {% if invoice.balance > 0 %}
 <article>
@@ -50,16 +62,13 @@
 {% endif %}
 
 <h2>Pagos</h2>
-<table class="striped">
-  <thead><tr><th>Fecha</th><th>Pagó</th><th>Medio</th><th class="num">Monto</th><th>Notas</th><th></th></tr></thead>
-  <tbody>
+<div class="list">
   {% for p in invoice.payments %}
-    <tr>
-      <td>{{ p.date|fdate }}</td><td>{{ p.paid_by.name if p.paid_by else "—" }}</td><td>{{ p.method }}</td>
-      <td class="num">{{ p.amount|money(invoice.currency) }}</td><td>{{ p.notes }}</td>
-      <td><form method="post" action="/pagos/{{ p.id }}/eliminar"><button class="link" title="Eliminar">✕</button></form></td>
-    </tr>
-  {% else %}<tr><td colspan="6" class="muted">Sin pagos registrados.</td></tr>{% endfor %}
-  </tbody>
-</table>
+    <div class="item">
+      <span class="grow"><span class="title">{{ p.amount|money(invoice.currency) }}</span>
+        <span class="sub">{{ p.date|fdate }} · {{ p.paid_by.name if p.paid_by else "—" }} · {{ p.method }}{% if p.notes %} · {{ p.notes }}{% endif %}</span></span>
+      <form method="post" action="/pagos/{{ p.id }}/eliminar" onsubmit="return confirm('¿Eliminar el pago?')"><button class="link" title="Eliminar">✕</button></form>
+    </div>
+  {% else %}<p class="muted">Sin pagos registrados.</p>{% endfor %}
+</div>
 {% endblock %}

@@ -1,42 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Facturas{% endblock %}
 {% block content %}
-<div class="actions" style="justify-content: space-between">
+<div class="head">
   <h1>Facturas</h1>
-  <a href="/facturas/nueva" role="button">+ Factura</a>
+  <div class="actions">
+    <a href="/facturas/importar" role="button">📄 PDF</a>
+    <a href="/facturas/nueva" role="button" class="secondary outline">+</a>
+  </div>
 </div>
 
-<form method="get" class="inline-form">
+<form method="get">
   <input type="search" name="q" value="{{ q }}" placeholder="Proveedor, concepto o número">
-  <select name="status"><option value="">Todos los estados</option>
-    {% for s in statuses %}<option {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}</select>
-  <select name="owner"><option value="">Todos los titulares</option>
-    {% for p in people %}<option value="{{ p.id }}" {{ 'selected' if p.id|string == owner }}>{{ p.name }}</option>{% endfor %}</select>
-  <select name="category"><option value="">Todas las categorías</option>
-    {% for c in INVOICE_CATEGORIES %}<option {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}</select>
-  <input type="month" name="period" value="{{ period }}" title="Período">
-  <button type="submit">Filtrar</button>
+  <details class="filters" {{ 'open' if status or owner or category or period }}>
+    <summary>Filtros</summary>
+    <div class="grid">
+      <select name="status"><option value="">Todos los estados</option>
+        {% for s in statuses %}<option {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}</select>
+      <select name="owner"><option value="">Todos los titulares</option>
+        {% for p in people %}<option value="{{ p.id }}" {{ 'selected' if p.id|string == owner }}>{{ p.name }}</option>{% endfor %}</select>
+      <select name="category"><option value="">Todas las categorías</option>
+        {% for c in INVOICE_CATEGORIES %}<option {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}</select>
+      <input type="month" name="period" value="{{ period }}" title="Período">
+    </div>
+    <button type="submit">Filtrar</button>
+  </details>
 </form>
 
-<div class="overflow-auto">
-<table class="striped">
-  <thead><tr><th>Vence</th><th>Proveedor</th><th>Titular</th><th>Categoría</th><th class="num">Importe</th><th class="num">Saldo</th><th>Estado</th></tr></thead>
-  <tbody>
+{% for cur, t in totals.items() %}
+  <p class="muted"><small>{{ cur }}: total {{ t.amount|money(cur) }} · pagado {{ t.paid|money(cur) }} · <strong>adeudado {{ t.balance|money(cur) }}</strong></small></p>
+{% endfor %}
+
+<div class="list">
   {% for inv in invoices %}
-    <tr>
-      <td>{{ inv.due_date|fdate if inv.due_date else "—" }}</td>
-      <td><a href="/facturas/{{ inv.id }}">{{ inv.provider }}</a><br><small class="muted">{{ inv.concept }} {{ inv.period }}</small></td>
-      <td>{{ inv.owner.name if inv.owner else "" }}</td>
-      <td>{{ inv.category }}</td>
-      <td class="num">{{ inv.amount|money(inv.currency) }}</td>
-      <td class="num">{{ inv.balance|money(inv.currency) if inv.balance > 0 else "—" }}</td>
-      <td><span class="badge {{ inv.status }}">{{ inv.status }}</span></td>
-    </tr>
-  {% else %}<tr><td colspan="7" class="muted">No hay facturas.</td></tr>{% endfor %}
-  </tbody>
-  {% for cur, t in totals.items() %}
-  <tfoot><tr><th colspan="4">Totales {{ cur }}</th><th class="num">{{ t.amount|money(cur) }}</th><th class="num">{{ t.balance|money(cur) }}</th><th>pagado {{ t.paid|money(cur) }}</th></tr></tfoot>
-  {% endfor %}
-</table>
+    <a class="item" href="/facturas/{{ inv.id }}">
+      <span class="grow"><span class="title">{{ inv.provider }}</span>
+        <span class="sub">{{ inv.owner.name if inv.owner else "" }} · {{ inv.category }}{% if inv.due_date %} · vence {{ inv.due_date|fdate }}{% endif %}</span></span>
+      <span class="right"><span class="big">{{ inv.amount|money(inv.currency) }}</span><br><span class="badge {{ inv.status }}">{{ inv.status }}</span></span>
+    </a>
+  {% else %}<p class="muted">No hay facturas. <a href="/facturas/importar">Importá un PDF</a>.</p>{% endfor %}
 </div>
 {% endblock %}

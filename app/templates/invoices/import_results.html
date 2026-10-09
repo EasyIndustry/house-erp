@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Importación{% endblock %}
+{% block content %}
+<h1>Resultado de la importación</h1>
+<div class="list">
+  {% for r in results %}
+    {% if r.invoice %}
+      <a class="item" href="/facturas/{{ r.invoice.id }}">
+        <span class="thumb ph">✅</span>
+        <span class="grow"><span class="title">{{ r.invoice.provider }}</span>
+          <span class="sub">{{ r.name }}{% if r.invoice.due_date %} · vence {{ r.invoice.due_date|fdate }}{% endif %}</span></span>
+        <span class="right big">{{ r.invoice.amount|money(r.invoice.currency) }}</span>
+      </a>
+    {% else %}
+      <div class="item">
+        <span class="thumb ph">⚠️</span>
+        <span class="grow"><span class="title">{{ r.name }}</span><span class="sub">{{ r.error }}</span></span>
+        {% if r.duplicate %}<a href="/facturas/{{ r.duplicate.id }}">ver</a>
+        {% elif r.parsed %}<a href="/facturas/nueva">cargar</a>{% endif %}
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+<a href="/facturas" role="button" class="secondary">Ir a facturas</a>
+{% endblock %}

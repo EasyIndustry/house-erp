@@ -1,8 +1,6 @@
 // Precarga de facturas a partir del QR de ARCA/AFIP.
 const form = document.querySelector("form[enctype]");
 const msg = document.getElementById("qr-msg");
-const paidNow = document.getElementById("paid_now");
-paidNow.addEventListener("change", () => document.getElementById("paid-fields").hidden = !paidNow.checked);
 
 function setField(name, value) {
   if (value === undefined || value === null || value === "") return;

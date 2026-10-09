@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block title %}{{ "Editar" if invoice.id else "Nueva" }} factura{% endblock %}
 {% block content %}
-<h1>{{ "Editar factura" if invoice.id else "Nueva factura" }}</h1>
+<h1>{{ "Editar factura" if invoice.id else ("Revisar factura" if parsed else "Nueva factura") }}</h1>
 
-{% if not invoice.id %}
+{% if parsed %}
+  <div class="notice {{ 'warn' if parsed.warnings or duplicate else 'ok' }}">
+    {% if parsed.template_name %}✅ Reconocida como <strong>{{ parsed.template_name }}</strong>{% else %}🔎 Proveedor sin plantilla{% endif %}
+    {% if parsed.from_afip_qr %} · datos fiscales tomados del QR de ARCA{% endif %}
+    {% if duplicate %}<ul><li>Parece que ya está cargada: <a href="/facturas/{{ duplicate.id }}">ver factura</a></li></ul>{% endif %}
+    {% if parsed.warnings %}<ul>{% for w in parsed.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+{% endif %}
+
+{% if not invoice.id and not parsed %}
 <details>
   <summary>📷 Cargar desde el QR de ARCA/AFIP</summary>
   <p class="muted">Escaneá el QR de la factura electrónica o pegá la URL que contiene. Completa fecha, CUIT, número, importe y moneda.</p>
@@ -18,6 +27,7 @@
 {% endif %}
 
 <form method="post" enctype="multipart/form-data" action="{{ '/facturas/%d/editar' % invoice.id if invoice.id else '/facturas/nueva' }}">
+  {% if attachment_name %}<input type="hidden" name="attachment_name" value="{{ attachment_name }}">{% endif %}
   <div class="grid">
     <label>Proveedor / emisor *<input name="provider" value="{{ invoice.provider }}" required></label>
     <label>CUIT emisor <input name="provider_cuit" value="{{ invoice.provider_cuit }}"></label>
@@ -50,10 +60,24 @@
     <label>Emisión <input name="issue_date" type="date" value="{{ invoice.issue_date.isoformat() if invoice.issue_date else '' }}"></label>
     <label>Vencimiento <input name="due_date" type="date" value="{{ invoice.due_date.isoformat() if invoice.due_date else '' }}"></label>
   </div>
+  <div class="grid">
+    <label>Nº de cliente / cuenta <input name="account_number" value="{{ invoice.account_number }}"></label>
+    <label>Código de pago electrónico <input name="payment_code" value="{{ invoice.payment_code }}" inputmode="numeric"></label>
+  </div>
+  <label>Link de pago <input name="payment_url" type="url" value="{{ invoice.payment_url }}" placeholder="https://"></label>
+  {% if attachment_name %}
+    <p>📎 PDF adjunto: se guarda con la factura.</p>
+  {% else %}
   <label>Adjunto (PDF o foto){% if invoice.attachment %} — ya tiene uno, subí otro para reemplazarlo{% endif %}
     <input type="file" name="attachment" accept=".pdf,image/*">
   </label>
+  {% endif %}
   <label>Notas <textarea name="notes" rows="2">{{ invoice.notes }}</textarea></label>
+
+  {% if parsed %}
+  <label><input type="checkbox" name="remember_template" value="1" checked>
+    Recordar este proveedor (la próxima vez usa el mismo titular, categoría y servicio)</label>
+  {% endif %}
 
   {% if not invoice.id %}
   <fieldset>
@@ -72,10 +96,23 @@
   {% endif %}
   <button type="submit">Guardar</button>
 </form>
+
+{% if parsed %}
+<details>
+  <summary class="muted">Ver texto leído del PDF (sirve para ajustar plantillas)</summary>
+  <pre class="raw">{{ parsed.text or "(sin texto)" }}</pre>
+</details>
+{% endif %}
 {% endblock %}
 {% block scripts %}
 {% if not invoice.id %}
+<script>
+  const paidNow = document.getElementById("paid_now");
+  paidNow.addEventListener("change", () => document.getElementById("paid-fields").hidden = !paidNow.checked);
+</script>
+{% if not parsed %}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/static/invoice_qr.js"></script>
+{% endif %}
 {% endif %}
 {% endblock %}

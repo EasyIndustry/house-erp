@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Plantilla{% endblock %}
+{% block content %}
+<h1>{{ "Editar plantilla" if template.id else "Nueva plantilla" }}</h1>
+<form method="post" action="/plantillas/guardar">
+  <input type="hidden" name="template_id" value="{{ template.id or '' }}">
+  <div class="grid">
+    <label>Nombre *<input name="name" value="{{ template.name }}" required></label>
+    <label>Proveedor (como se guarda en la factura) <input name="provider" value="{{ template.provider }}"></label>
+  </div>
+  <fieldset>
+    <legend><strong>¿Cómo se reconoce?</strong></legend>
+    <div class="grid">
+      <label>CUIT del emisor <input name="cuit" value="{{ template.cuit }}" inputmode="numeric" placeholder="30-12345678-9"></label>
+      <label>Palabras clave (separadas por coma) <input name="keywords" value="{{ template.keywords }}" placeholder="edenor, empresa distribuidora"></label>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend><strong>¿Qué se le asigna?</strong></legend>
+    <div class="grid">
+      <label>Categoría
+        <select name="category">{% for c in INVOICE_CATEGORIES %}<option {{ 'selected' if c == template.category }}>{{ c }}</option>{% endfor %}</select>
+      </label>
+      <label>Titular
+        <select name="owner_id"><option value="">—</option>
+          {% for p in people %}<option value="{{ p.id }}" {{ 'selected' if p.id == template.owner_id }}>{{ p.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Servicio
+        <select name="service_id"><option value="">—</option>
+          {% for s in services %}<option value="{{ s.id }}" {{ 'selected' if s.id == template.service_id }}>{{ s.name }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+  </fieldset>
+  <details {{ 'open' if template.amount_regex or template.due_regex or template.account_regex }}>
+    <summary>Avanzado: expresiones regulares</summary>
+    <p class="muted"><small>Sólo si la lectura automática se equivoca con este proveedor. Cada expresión debe tener un grupo de captura <code>( )</code> con el valor. Ej. importe: <code>Total a pagar\s*\$?\s*([\d.]+,\d{2})</code></small></p>
+    <label>Importe <input name="amount_regex" value="{{ template.amount_regex }}"></label>
+    <label>Vencimiento <input name="due_regex" value="{{ template.due_regex }}"></label>
+    <label>Nº de cliente <input name="account_regex" value="{{ template.account_regex }}"></label>
+  </details>
+  <label>Notas <textarea name="notes" rows="2">{{ template.notes }}</textarea></label>
+  <button type="submit">Guardar</button>
+</form>
+{% if template.id %}
+<form method="post" action="/plantillas/{{ template.id }}/eliminar" onsubmit="return confirm('¿Eliminar la plantilla?')">
+  <button class="secondary outline">Eliminar plantilla</button>
+</form>
+{% endif %}
+{% endblock %}

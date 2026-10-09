@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app import models
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 def money(value, currency: str = "ARS") -> str:
@@ -44,8 +45,21 @@ templates.env.globals.update(
 )
 
 
+def _section(path: str) -> str:
+    if path == "/":
+        return "home"
+    if path.startswith("/stock/escanear"):
+        return "scan"
+    if path.startswith("/stock"):
+        return "stock"
+    if path.startswith("/facturas"):
+        return "facturas"
+    return "mas"
+
+
 def render(request: Request, name: str, **context):
     context.setdefault("today", date.today())
+    context.setdefault("section", _section(request.url.path))
     return templates.TemplateResponse(request, name, context)
 
 

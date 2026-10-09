@@ -6,22 +6,16 @@
   <a href="/servicios/nuevo" role="button">+ Servicio</a>
 </div>
 <p class="muted">Registrá acá luz, gas, internet, expensas, prepaga, seguros… El tablero te avisa cuando falta cargar la factura del período.</p>
-<div class="overflow-auto">
-<table class="striped">
-  <thead><tr><th>Servicio</th><th>Titular</th><th>Nº cliente</th><th>Frecuencia</th><th class="num">Vence el día</th><th class="num">Monto estimado</th><th></th></tr></thead>
-  <tbody>
+<div class="list">
   {% for s in services %}
-    <tr {% if not s.active %}class="muted"{% endif %}>
-      <td><a href="/servicios/{{ s.id }}/editar">{{ s.name }}</a><br><small class="muted">{{ s.provider }} · {{ s.category }}{% if not s.active %} · inactivo{% endif %}</small></td>
-      <td>{{ s.owner.name if s.owner else "" }}</td>
-      <td>{{ s.account_number }}</td>
-      <td>{{ s.frequency }}</td>
-      <td class="num">{{ s.due_day or "" }}</td>
-      <td class="num">{{ s.expected_amount|money if s.expected_amount else "" }}</td>
-      <td><a href="/facturas/nueva?service_id={{ s.id }}">+ factura</a></td>
-    </tr>
-  {% else %}<tr><td colspan="7" class="muted">Sin servicios cargados.</td></tr>{% endfor %}
-  </tbody>
-</table>
+    <div class="item" {% if not s.active %}style="opacity:.55"{% endif %}>
+      <a class="grow" href="/servicios/{{ s.id }}/editar" style="text-decoration:none;color:inherit">
+        <span class="title">{{ s.name }}</span>
+        <span class="sub">{{ s.provider }} · {{ s.category }} · {{ s.frequency }}{% if s.due_day %} · vence día {{ s.due_day }}{% endif %}{% if s.account_number %} · cliente {{ s.account_number }}{% endif %}{% if s.owner %} · {{ s.owner.name }}{% endif %}{% if not s.active %} · inactivo{% endif %}</span>
+      </a>
+      <a class="right" href="/facturas/nueva?service_id={{ s.id }}">{{ s.expected_amount|money if s.expected_amount else "" }}<br><small>+ factura</small></a>
+    </div>
+  {% else %}<p class="muted">Sin servicios cargados.</p>{% endfor %}
 </div>
+<p class="muted"><small>Tip: si cargás el nº de cliente, las facturas PDF que lo mencionen se asocian solas a este servicio y a su titular.</small></p>
 {% endblock %}

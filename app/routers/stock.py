@@ -107,20 +107,20 @@ def product_create(
     return redirect(f"/stock/{product.id}")
 
 
-@router.get("/stock/{product_id}")
+@router.get("/stock/{product_id:int}")
 def product_detail(request: Request, product_id: int, session: Session = Depends(get_session)):
     product = _get_product(session, product_id)
     movements = sorted(product.movements, key=lambda m: (m.date, m.id), reverse=True)
     return render(request, "stock/detail.html", product=product, movements=movements)
 
 
-@router.get("/stock/{product_id}/editar")
+@router.get("/stock/{product_id:int}/editar")
 def product_edit(request: Request, product_id: int, session: Session = Depends(get_session)):
     return render(request, "stock/form.html", product=_get_product(session, product_id),
                   info=None, looked_up=False, locations=session.exec(select(Location)).all())
 
 
-@router.post("/stock/{product_id}/editar")
+@router.post("/stock/{product_id:int}/editar")
 def product_update(
     product_id: int, barcode: str = Form(""), name: str = Form(...), brand: str = Form(""),
     category: str = Form("Otros"), unit: str = Form("u"), package_size: str = Form(""),
@@ -139,14 +139,14 @@ def product_update(
     return redirect(f"/stock/{product_id}")
 
 
-@router.post("/stock/{product_id}/eliminar")
+@router.post("/stock/{product_id:int}/eliminar")
 def product_delete(product_id: int, session: Session = Depends(get_session)):
     session.delete(_get_product(session, product_id))
     session.commit()
     return redirect("/stock")
 
 
-@router.post("/stock/{product_id}/movimiento")
+@router.post("/stock/{product_id:int}/movimiento")
 def add_movement(
     product_id: int, kind: str = Form(...), quantity: str = Form(...),
     movement_date: str = Form(""), expires_on: str = Form(""), unit_price: str = Form(""),
@@ -172,7 +172,7 @@ def add_movement(
     return redirect(f"/stock/{product_id}")
 
 
-@router.post("/stock/movimiento/{movement_id}/eliminar")
+@router.post("/stock/movimiento/{movement_id:int}/eliminar")
 def delete_movement(movement_id: int, session: Session = Depends(get_session)):
     movement = session.get(StockMovement, movement_id)
     if not movement:

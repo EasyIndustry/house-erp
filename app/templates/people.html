@@ -35,23 +35,15 @@
 </div>
 
 <h2>Personas</h2>
-<table>
-  <thead><tr><th>Nombre</th><th>Tipo</th><th>Notas</th><th></th></tr></thead>
-  <tbody>
-  {% for p in people + [None] %}
-    {% set fid = "person-%s" % (p.id if p else "new") %}
-    <tr>
-      <td><input form="{{ fid }}" name="name" value="{{ p.name if p else '' }}" placeholder="Nueva persona" required></td>
-      <td><select form="{{ fid }}" name="kind">{% for k, label in PERSON_KINDS.items() %}<option value="{{ k }}" {{ 'selected' if k == (p.kind if p else 'miembro') }}>{{ label }}</option>{% endfor %}</select></td>
-      <td><input form="{{ fid }}" name="notes" value="{{ p.notes if p else '' }}" placeholder="ej. mi vieja, inquilino"></td>
-      <td>
-        <form id="{{ fid }}" method="post" action="/personas/guardar">
-          <input type="hidden" name="person_id" value="{{ p.id if p else '' }}">
-          <button type="submit" class="{{ 'secondary outline' if p else '' }}">{{ "Guardar" if p else "Agregar" }}</button>
-        </form>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="list">
+{% for p in people + [None] %}
+  <form method="post" action="/personas/guardar" class="item" style="flex-wrap:wrap">
+    <input type="hidden" name="person_id" value="{{ p.id if p else '' }}">
+    <input name="name" value="{{ p.name if p else '' }}" placeholder="Nueva persona" required style="flex:2 1 160px;margin:0">
+    <select name="kind" style="flex:1 1 140px;margin:0">{% for k, label in PERSON_KINDS.items() %}<option value="{{ k }}" {{ 'selected' if k == (p.kind if p else 'miembro') }}>{{ label }}</option>{% endfor %}</select>
+    <input name="notes" value="{{ p.notes if p else '' }}" placeholder="Notas (ej. mi vieja, la dueña)" style="flex:2 1 160px;margin:0">
+    <button type="submit" class="{{ 'secondary outline' if p else '' }}" style="flex:0 0 auto;width:auto;margin:0">{{ "Guardar" if p else "Agregar" }}</button>
+  </form>
+{% endfor %}
+</div>
 {% endblock %}

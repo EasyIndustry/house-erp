@@ -45,23 +45,14 @@
 </article>
 
 <h2>Historial</h2>
-<div class="overflow-auto">
-<table class="striped">
-  <thead><tr><th>Fecha</th><th>Tipo</th><th class="num">Cantidad</th><th>Vence</th><th class="num">Precio u.</th><th>Notas</th><th></th></tr></thead>
-  <tbody>
+<div class="list">
   {% for m in movements %}
-    <tr>
-      <td>{{ m.date|fdate }}</td>
-      <td>{{ MOVEMENT_KINDS.get(m.kind, m.kind) }}</td>
-      <td class="num">{{ "+" if m.quantity > 0 }}{{ m.quantity|qty }}</td>
-      <td>{{ m.expires_on|fdate }}</td>
-      <td class="num">{{ m.unit_price|money if m.unit_price else "" }}</td>
-      <td>{{ m.notes }}</td>
-      <td><form method="post" action="/stock/movimiento/{{ m.id }}/eliminar"><button class="link" title="Eliminar">✕</button></form></td>
-    </tr>
-  {% else %}<tr><td colspan="7" class="muted">Sin movimientos.</td></tr>{% endfor %}
-  </tbody>
-</table>
+    <div class="item">
+      <span class="grow"><span class="title">{{ MOVEMENT_KINDS.get(m.kind, m.kind) }} · {{ "+" if m.quantity > 0 }}{{ m.quantity|qty }} {{ product.unit }}</span>
+        <span class="sub">{{ m.date|fdate }}{% if m.expires_on %} · vence {{ m.expires_on|fdate }}{% endif %}{% if m.unit_price %} · {{ m.unit_price|money }} c/u{% endif %}{% if m.notes %} · {{ m.notes }}{% endif %}</span></span>
+      <form method="post" action="/stock/movimiento/{{ m.id }}/eliminar" onsubmit="return confirm('¿Eliminar el movimiento?')"><button class="link" title="Eliminar">✕</button></form>
+    </div>
+  {% else %}<p class="muted">Sin movimientos.</p>{% endfor %}
 </div>
 {% endblock %}
 {% block scripts %}

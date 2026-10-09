@@ -1,0 +1,25 @@
+{
+  "name": "House ERP",
+  "short_name": "Casa",
+  "description": "Stock y facturas de la casa",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f6f5c",
+  "lang": "es-AR",
+  "icons": [
+    {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Escanear", "url": "/stock/escanear"},
+    {"name": "Importar factura", "url": "/facturas/importar"}
+  ],
+  "share_target": {
+    "action": "/facturas/importar",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {"files": [{"name": "files", "accept": ["application/pdf", ".pdf"]}]}
+  }
+}

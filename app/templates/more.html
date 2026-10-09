@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Más{% endblock %}
+{% block content %}
+<h1>Más</h1>
+<div class="list">
+  <a class="item" href="/facturas/importar"><span class="thumb ph">📄</span><span class="grow"><span class="title">Importar factura PDF</span><span class="sub">Se lee sola: proveedor, importe, vencimiento y link de pago</span></span></a>
+  <a class="item" href="/stock/compras"><span class="thumb ph">🛒</span><span class="grow"><span class="title">Lista de compras</span><span class="sub">Lo que está por debajo del mínimo</span></span></a>
+  <a class="item" href="/servicios"><span class="thumb ph">🔌</span><span class="grow"><span class="title">Servicios</span><span class="sub">Luz, gas, agua, internet, expensas…</span></span></a>
+  <a class="item" href="/plantillas"><span class="thumb ph">🧩</span><span class="grow"><span class="title">Plantillas de facturas</span><span class="sub">Cómo se reconoce cada proveedor</span></span></a>
+  <a class="item" href="/personas"><span class="thumb ph">👥</span><span class="grow"><span class="title">Personas, cuentas y ubicaciones</span><span class="sub">Quién debe a quién</span></span></a>
+  <a class="item" href="/exportar/stock.csv"><span class="thumb ph">⬇️</span><span class="grow"><span class="title">Exportar stock (CSV)</span></span></a>
+  <a class="item" href="/exportar/facturas.csv"><span class="thumb ph">⬇️</span><span class="grow"><span class="title">Exportar facturas (CSV)</span></span></a>
+</div>
+<p class="muted"><small>Tip: en Android, abrí el menú del navegador → <b>Instalar app</b>. Después vas a poder compartir los PDF de WhatsApp o Gmail directo a “Casa”.</small></p>
+{% endblock %}

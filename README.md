@@ -1,7 +1,11 @@
 # 🏠 House ERP
 
 ERP hogareño para llevar **el stock de la casa** y **las facturas/servicios** (propios o de
-terceros), con lectura de códigos de barras y del QR de las facturas electrónicas de ARCA/AFIP.
+terceros), con lectura de códigos de barras, **importación automática de facturas en PDF** y
+lectura del QR de las facturas electrónicas de ARCA/AFIP.
+
+Pensado para el celular: barra de navegación inferior, listas táctiles y se instala como app
+(PWA). En Android se puede **compartir un PDF desde WhatsApp/Gmail directo a la app**.
 
 Hecho con Python + FastAPI + SQLite. No necesita servidor de base de datos: todo queda en
 `data/house.db` (y los adjuntos en `data/uploads/`).
@@ -42,6 +46,33 @@ Tests: `pytest`.
 - **Lista de compras** automática con lo que está por debajo del mínimo.
 - **Alertas de vencimiento** (próximos 7 días).
 
+### Importar facturas en PDF (`/facturas/importar`)
+Subís el PDF que te mandan (o lo compartís desde WhatsApp) y se lee solo:
+
+| Dato | De dónde sale |
+|---|---|
+| CUIT, nº de comprobante, fecha, importe, moneda | QR de ARCA/AFIP impreso en la factura (exacto) |
+| Proveedor y categoría | Plantilla que coincide por CUIT o palabras clave |
+| Importe (si no hay QR) | "Total a pagar", "Importe a pagar", "Total a abonar"… |
+| Vencimiento | 1er vencimiento (ignora "próximo vencimiento" y "vto. CAE") |
+| Período, nº de cliente, código de pago electrónico | Texto de la factura |
+| Link de pago | Botones/links del PDF, QR o URLs del texto con "pago" |
+| Servicio y titular | Servicio cuyo nº de cliente aparece en la factura, o la plantilla |
+
+- Con **un PDF** te muestra la factura precargada para revisar; con **varios**, carga
+  directamente las que se leyeron completas y te avisa cuáles faltan.
+- Detecta **duplicados** (mismo CUIT + número, o mismo proveedor + importe + vencimiento).
+- El PDF queda adjunto y la factura muestra **"Pagar online"** y el código de pago para copiar.
+- **Plantillas** (`/plantillas`): vienen incluidas Edenor, Edesur, Edelap, EPEC, AySA, ABSA,
+  Metrogas, Naturgy, Camuzzi, Ecogas, Telecentro, Personal/Fibertel, Movistar, Claro,
+  DirecTV, ABL (AGIP), ARBA y expensas. Al guardar una factura importada con
+  "Recordar este proveedor", se crea una plantilla por CUIT con el titular, categoría y
+  servicio que elegiste: la próxima factura de ese proveedor ya viene asignada (ideal para
+  las facturas que mandan las dueñas). Si algún proveedor tiene un formato raro, la
+  plantilla admite expresiones regulares propias para importe, vencimiento y nº de cliente;
+  en la pantalla de revisión podés ver el texto leído del PDF para armarlas.
+- Limitación: un PDF escaneado (foto) no tiene texto; de ese se lee sólo el QR.
+
 ### Facturas y servicios
 - **Facturas** con proveedor, CUIT, número, concepto, categoría, período, importe, moneda
   (ARS/USD), emisión, vencimiento y **adjunto** (PDF o foto).
@@ -75,6 +106,7 @@ app/
   services/
     barcode.py       # búsqueda de códigos en APIs públicas
     afip_qr.py       # lectura del QR de facturas electrónicas
+    invoice_pdf.py   # importación de facturas PDF + plantillas por proveedor
     reports.py       # alertas, gastos y saldos
   templates/         # HTML (Jinja2 + Pico CSS)
   static/            # CSS y JS de los escáneres
@@ -89,8 +121,8 @@ Variables de entorno opcionales: `HOUSE_ERP_DATA` (carpeta de datos) y `HOUSE_ER
 - **Usuarios y login** (hoy no tiene autenticación: usarlo sólo en la red de la casa o
   detrás de un proxy con login).
 - **Recordatorios** de vencimientos por Telegram, WhatsApp o mail.
-- **Leer facturas que llegan por mail** (Gmail) y cargarlas solas, extrayendo los datos
-  del PDF.
+- **Leer facturas que llegan por mail** (Gmail) y pasarlas por el importador de PDF.
+- **OCR** para facturas escaneadas o fotos.
 - **Débitos automáticos / Mercado Pago**: importar movimientos para marcar pagos solos.
 - **Presupuesto mensual** por categoría y gráficos de evolución de cada servicio.
 - **Historial de precios** por producto y comparación entre supermercados.
@@ -101,4 +133,3 @@ Variables de entorno opcionales: `HOUSE_ERP_DATA` (carpeta de datos) y `HOUSE_ER
 - **Salud y mascotas**: vacunas, turnos, medicamentos (con su stock y vencimiento).
 - **Documentos**: escrituras, contratos de alquiler, pólizas, con fecha de renovación.
 - **Cotización del dólar** automática para ver todo en una sola moneda.
-- **PWA** para instalarla en el celular y usarla offline.
